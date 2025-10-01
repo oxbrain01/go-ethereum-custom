@@ -39,6 +39,8 @@ const (
 	Shanghai
 	Cancun
 	Prague
+	Prague1
+	Prague2
 	Osaka
 	BPO1
 	BPO2
@@ -76,6 +78,8 @@ var forkToString = map[Fork]string{
 	Shanghai:         "Shanghai",
 	Cancun:           "Cancun",
 	Prague:           "Prague",
+	Prague1:          "Prague1",
+	Prague2:          "Prague2",
 	Osaka:            "Osaka",
 	BPO1:             "BPO1",
 	BPO2:             "BPO2",
