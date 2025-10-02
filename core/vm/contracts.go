@@ -30,6 +30,7 @@ import (
 	bls12381 "github.com/consensys/gnark-crypto/ecc/bls12-381"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fp"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
+	patched_big "github.com/ethereum/go-bigmodexpfix/src/math/big"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/bitutil"
 	"github.com/ethereum/go-ethereum/core/tracing"
@@ -469,12 +470,19 @@ func modexpIterationCount(expLen uint64, expHead uint256.Int, multiplier uint64)
 
 	// For large exponents (expLen > 32), add (expLen - 32) * multiplier
 	if expLen > 32 {
-		iterationCount = (expLen - 32) * multiplier
+		carry, count := bits.Mul64(expLen-32, multiplier)
+		if carry > 0 {
+			return math.MaxUint64
+		}
+		iterationCount = count
 	}
-
 	// Add the MSB position - 1 if expHead is non-zero
 	if bitLen := expHead.BitLen(); bitLen > 0 {
-		iterationCount += uint64(bitLen - 1)
+		count, carry := bits.Add64(iterationCount, uint64(bitLen-1), 0)
+		if carry > 0 {
+			return math.MaxUint64
+		}
+		iterationCount = count
 	}
 
 	return max(iterationCount, 1)
@@ -531,7 +539,6 @@ func berlinModexpGas(baseLen, expLen, modLen uint64, expHead uint256.Int) uint64
 func osakaModexpGas(baseLen, expLen, modLen uint64, expHead uint256.Int) uint64 {
 	const (
 		multiplier = 16
-		divisor    = 3
 		minGas     = 500
 	)
 
@@ -542,7 +549,7 @@ func osakaModexpGas(baseLen, expLen, modLen uint64, expHead uint256.Int) uint64 
 	}
 	iterationCount := modexpIterationCount(expLen, expHead, multiplier)
 
-	// Calculate gas: (multComplexity * iterationCount) / osakaDivisor
+	// Calculate gas: multComplexity * iterationCount
 	carry, gas := bits.Mul64(iterationCount, multComplexity)
 	if carry != 0 {
 		return math.MaxUint64
@@ -625,9 +632,9 @@ func (c *bigModExp) Run(input []byte) ([]byte, error) {
 	}
 	// Retrieve the operands and execute the exponentiation
 	var (
-		base = new(big.Int).SetBytes(getData(input, 0, baseLen))
-		exp  = new(big.Int).SetBytes(getData(input, baseLen, expLen))
-		mod  = new(big.Int).SetBytes(getData(input, baseLen+expLen, modLen))
+		base = new(patched_big.Int).SetBytes(getData(input, 0, baseLen))
+		exp  = new(patched_big.Int).SetBytes(getData(input, baseLen, expLen))
+		mod  = new(patched_big.Int).SetBytes(getData(input, baseLen+expLen, modLen))
 		v    []byte
 	)
 	switch {

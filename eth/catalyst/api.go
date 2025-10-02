@@ -241,8 +241,8 @@ func (api *ConsensusAPI) ForkchoiceUpdatedV3P11(update engine.ForkchoiceStateV1,
 			return engine.STATUS_INVALID, attributesErr("missing beacon root")
 		case params.ProposerPubkey == nil:
 			return engine.STATUS_INVALID, attributesErr("missing proposer pubkey")
-		case !api.checkFork(params.Timestamp, forks.Prague1, forks.Prague2, forks.Osaka):
-			return engine.STATUS_INVALID, unsupportedForkErr("fcuV3P11 must only be called for prague1 payloads")
+		case !api.checkFork(params.Timestamp, forks.Prague1, forks.Prague2, forks.Osaka, forks.BPO1, forks.BPO2, forks.BPO3, forks.BPO4, forks.BPO5):
+			return engine.STATUS_INVALID, unsupportedForkErr("fcuV3P11 must only be called for prague1 onwards payloads")
 		}
 	}
 	// TODO(matt): the spec requires that fcu is applied when called on a valid
@@ -447,13 +447,21 @@ func (api *ConsensusAPI) GetPayloadV1(payloadID engine.PayloadID) (*engine.Execu
 
 // GetPayloadV2 returns a cached payload by id.
 func (api *ConsensusAPI) GetPayloadV2(payloadID engine.PayloadID) (*engine.ExecutionPayloadEnvelope, error) {
+	// executionPayload: ExecutionPayloadV1 | ExecutionPayloadV2 where:
+	//
+	// - ExecutionPayloadV1 MUST be returned if the payload timestamp is lower
+	//   than the Shanghai timestamp
+	//
+	// - ExecutionPayloadV2 MUST be returned if the payload timestamp is greater
+	//   or equal to the Shanghai timestamp
 	if !payloadID.Is(engine.PayloadV1, engine.PayloadV2) {
 		return nil, engine.UnsupportedFork
 	}
 	return api.getPayload(payloadID, false)
 }
 
-// GetPayloadV3 returns a cached payload by id.
+// GetPayloadV3 returns a cached payload by id. This endpoint should only
+// be used for the Cancun fork.
 func (api *ConsensusAPI) GetPayloadV3(payloadID engine.PayloadID) (*engine.ExecutionPayloadEnvelope, error) {
 	if !payloadID.Is(engine.PayloadV3) {
 		return nil, engine.UnsupportedFork
@@ -461,7 +469,8 @@ func (api *ConsensusAPI) GetPayloadV3(payloadID engine.PayloadID) (*engine.Execu
 	return api.getPayload(payloadID, false)
 }
 
-// GetPayloadV4 returns a cached payload by id.
+// GetPayloadV4 returns a cached payload by id. This endpoint should only
+// be used for the Prague fork.
 func (api *ConsensusAPI) GetPayloadV4(payloadID engine.PayloadID) (*engine.ExecutionPayloadEnvelope, error) {
 	if !payloadID.Is(engine.PayloadV3) {
 		return nil, engine.UnsupportedFork
@@ -477,7 +486,11 @@ func (api *ConsensusAPI) GetPayloadV4P11(payloadID engine.PayloadID) (*engine.Ex
 	return api.getPayload(payloadID, false)
 }
 
-// GetPayloadV5 returns a cached payload by id.
+// GetPayloadV5 returns a cached payload by id. This endpoint should only
+// be used after the Osaka fork.
+//
+// This method follows the same specification as engine_getPayloadV4 with
+// changes of returning BlobsBundleV2 with BlobSidecar version 1.
 func (api *ConsensusAPI) GetPayloadV5(payloadID engine.PayloadID) (*engine.ExecutionPayloadEnvelope, error) {
 	if !payloadID.Is(engine.PayloadV3) {
 		return nil, engine.UnsupportedFork
@@ -519,7 +532,7 @@ func (api *ConsensusAPI) GetBlobsV1(hashes []common.Hash) ([]*engine.BlobAndProo
 	if len(hashes) > 128 {
 		return nil, engine.TooLargeRequest.With(fmt.Errorf("requested blob count too large: %v", len(hashes)))
 	}
-	blobs, _, proofs, err := api.eth.BlobTxPool().GetBlobs(hashes, types.BlobSidecarVersion0)
+	blobs, _, proofs, err := api.eth.BlobTxPool().GetBlobs(hashes, types.BlobSidecarVersion0, false)
 	if err != nil {
 		return nil, engine.InvalidParams.With(err)
 	}
@@ -579,7 +592,7 @@ func (api *ConsensusAPI) GetBlobsV2(hashes []common.Hash) ([]*engine.BlobAndProo
 		return nil, nil
 	}
 
-	blobs, _, proofs, err := api.eth.BlobTxPool().GetBlobs(hashes, types.BlobSidecarVersion1)
+	blobs, _, proofs, err := api.eth.BlobTxPool().GetBlobs(hashes, types.BlobSidecarVersion1, false)
 	if err != nil {
 		return nil, engine.InvalidParams.With(err)
 	}
@@ -700,8 +713,8 @@ func (api *ConsensusAPI) NewPayloadV4P11(params engine.ExecutableData, versioned
 		return invalidStatus, paramsErr("nil executionRequests post-prague")
 	case proposerPubkey == nil:
 		return invalidStatus, paramsErr("nil proposerPubkey post-prague1")
-	case !api.checkFork(params.Timestamp, forks.Prague1, forks.Prague2, forks.Osaka):
-		return invalidStatus, unsupportedForkErr("newPayloadV4P11 must only be called for prague1 payloads")
+	case !api.checkFork(params.Timestamp, forks.Prague1, forks.Prague2, forks.Osaka, forks.BPO1, forks.BPO2, forks.BPO3, forks.BPO4, forks.BPO5):
+		return invalidStatus, unsupportedForkErr("newPayloadV4P11 must only be called for prague1 onwards payloads")
 	}
 	requests := convertRequests(executionRequests)
 	if err := validateRequests(requests); err != nil {

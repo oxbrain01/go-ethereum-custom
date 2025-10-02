@@ -699,15 +699,15 @@ func doCall(ctx context.Context, b Backend, args TransactionArgs, state *state.S
 	} else {
 		gp.AddGas(globalGasCap)
 	}
-	return applyMessage(ctx, b, args, state, header, timeout, gp, &blockCtx, &vm.Config{NoBaseFee: true}, precompiles, true)
+	return applyMessage(ctx, b, args, state, header, timeout, gp, &blockCtx, &vm.Config{NoBaseFee: true}, precompiles)
 }
 
-func applyMessage(ctx context.Context, b Backend, args TransactionArgs, state *state.StateDB, header *types.Header, timeout time.Duration, gp *core.GasPool, blockContext *vm.BlockContext, vmConfig *vm.Config, precompiles vm.PrecompiledContracts, skipChecks bool) (*core.ExecutionResult, error) {
+func applyMessage(ctx context.Context, b Backend, args TransactionArgs, state *state.StateDB, header *types.Header, timeout time.Duration, gp *core.GasPool, blockContext *vm.BlockContext, vmConfig *vm.Config, precompiles vm.PrecompiledContracts) (*core.ExecutionResult, error) {
 	// Get a new instance of the EVM.
 	if err := args.CallDefaults(gp.Gas(), blockContext.BaseFee, b.ChainConfig().ChainID); err != nil {
 		return nil, err
 	}
-	msg := args.ToMessage(header.BaseFee, skipChecks, skipChecks, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Berachain.Prague1.PoLDistributorAddress)
+	msg := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Berachain.Prague1.PoLDistributorAddress)
 	// Lower the basefee to 0 to avoid breaking EVM
 	// invariants (basefee < feecap).
 	if msg.GasPrice.Sign() == 0 {
@@ -858,7 +858,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 	if err := args.CallDefaults(gasCap, header.BaseFee, b.ChainConfig().ChainID); err != nil {
 		return 0, err
 	}
-	call := args.ToMessage(header.BaseFee, true, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Berachain.Prague1.PoLDistributorAddress)
+	call := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Berachain.Prague1.PoLDistributorAddress)
 
 	// Run the gas estimation and wrap any revertals into a custom return
 	estimate, revert, err := gasestimator.Estimate(ctx, call, opts, gasCap)
@@ -1314,7 +1314,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		args.AccessList = &accessList
 		isPrague1 := b.ChainConfig().IsPrague1(header.Number, header.Time)
 		distributorAddress := b.ChainConfig().Berachain.Prague1.PoLDistributorAddress
-		msg := args.ToMessage(header.BaseFee, true, true, isPrague1, distributorAddress)
+		msg := args.ToMessage(header.BaseFee, true, isPrague1, distributorAddress)
 
 		// Apply the transaction with the access list tracer
 		tracer := logger.NewAccessListTracer(accessList, addressesToExclude)

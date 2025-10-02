@@ -986,7 +986,7 @@ func (api *API) TraceCall(ctx context.Context, args ethapi.TransactionArgs, bloc
 	var (
 		isPrague1          = api.backend.ChainConfig().IsPrague1(blockContext.BlockNumber, blockContext.Time)
 		distributorAddress = api.backend.ChainConfig().Berachain.Prague1.PoLDistributorAddress
-		msg                = args.ToMessage(blockContext.BaseFee, true, true, isPrague1, distributorAddress)
+		msg                = args.ToMessage(blockContext.BaseFee, true, isPrague1, distributorAddress)
 		tx                 = args.ToTransaction(types.LegacyTxType, isPrague1, distributorAddress)
 		traceConfig        *TraceConfig
 	)
