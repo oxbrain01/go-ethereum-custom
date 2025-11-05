@@ -707,7 +707,7 @@ func doKeeperArchive(cmdline []string) {
 
 	var (
 		env    = build.Env()
-		vsn    = version.Archive(env.Commit)
+		vsn    = version.Archive(env.Tag, env.Commit)
 		keeper = "keeper-" + vsn + ".tar.gz"
 	)
 	maybeSkipArchive(env)

@@ -236,7 +236,7 @@ func newModernSigner(chainID *big.Int, fork forks.Fork) Signer {
 		s.txtypes.set(SetCodeTxType)
 	}
 	if fork >= forks.Prague1 {
-		s.txtypes[PoLTxType] = struct{}{}
+		s.txtypes.set(PoLTxType)
 	}
 	return s
 }
