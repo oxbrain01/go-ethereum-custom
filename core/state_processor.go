@@ -171,8 +171,8 @@ func ApplyTransactionWithEVM(msg *Message, gp *GasPool, statedb *state.StateDB, 
 	blockGasUsed := *usedGas + result.UsedGas
 	receipt = MakeReceipt(evm, result, statedb, blockNumber, blockHash, blockTime, tx, blockGasUsed, nil)
 
-	// Berachain: If Prague3, check for ERC20 transfers involving blocked addresses.
-	if evm.ChainConfig().IsPrague3(blockNumber, blockTime) {
+	// Berachain: If only in Prague3 (not Prague4 onwards), check for ERC20 transfers involving blocked addresses.
+	if !evm.ChainConfig().IsPrague4(blockNumber, blockTime) && evm.ChainConfig().IsPrague3(blockNumber, blockTime) {
 		if err := ValidatePrague3Transaction(&evm.ChainConfig().Berachain.Prague3, receipt); err != nil {
 			return nil, err
 		}

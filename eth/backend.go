@@ -34,6 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/filtermaps"
+	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state/pruner"
 	"github.com/ethereum/go-ethereum/core/txpool"
@@ -276,6 +277,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Berachain: log the forkID for debugging convenience.
+	currentHeader := eth.blockchain.CurrentHeader()
+	forkID := forkid.NewID(eth.blockchain.Config(), eth.blockchain.Genesis(), currentHeader.Number.Uint64(), currentHeader.Time)
+	log.Info("Fork Information", "forkID", forkID)
 
 	// Initialize filtermaps log index.
 	fmConfig := filtermaps.Config{

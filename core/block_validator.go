@@ -174,15 +174,6 @@ func (v *BlockValidator) ValidateState(block *types.Block, statedb *state.StateD
 		return fmt.Errorf("invalid gas used (remote: %d local: %d)", block.GasUsed(), res.GasUsed)
 	}
 
-	// Berachain: If Prague3, check for ERC20 transfers involving blocked addresses.
-	if v.config.IsPrague3(block.Number(), block.Time()) {
-		for _, receipt := range res.Receipts {
-			if err := ValidatePrague3Transaction(&v.config.Berachain.Prague3, receipt); err != nil {
-				return err
-			}
-		}
-	}
-
 	// Validate the received block's bloom with the one derived from the generated receipts.
 	// For valid blocks this should always validate to true.
 	//

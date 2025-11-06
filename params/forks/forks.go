@@ -42,6 +42,7 @@ const (
 	Prague1
 	Prague2
 	Prague3
+	Prague4
 	Osaka
 	BPO1
 	BPO2
@@ -83,6 +84,7 @@ var forkToString = map[Fork]string{
 	Prague1:          "Prague1",
 	Prague2:          "Prague2",
 	Prague3:          "Prague3",
+	Prague4:          "Prague4",
 	Osaka:            "Osaka",
 	BPO1:             "BPO1",
 	BPO2:             "BPO2",

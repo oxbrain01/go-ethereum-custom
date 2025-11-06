@@ -242,6 +242,9 @@ var (
 				},
 				RescueAddress: common.HexToAddress("0xD276D30592bE512a418f2448e23f9E7F372b32A2"),
 			},
+			Prague4: Prague4Config{
+				Time: newUint64(1762963200), // Nov 12 2025 16:00:00 UTC
+			},
 		},
 	}
 	// BepoliaChainConfig contains the chain parameters to run a node on the Bepolia test network.
@@ -621,6 +624,9 @@ type BerachainConfig struct {
 
 	// Prague3 fork values.
 	Prague3 Prague3Config `json:"prague3,omitempty"`
+
+	// Prague4 fork values.
+	Prague4 Prague4Config `json:"prague4,omitempty"`
 }
 
 // String implements the stringer interface.
@@ -634,6 +640,9 @@ func (o *BerachainConfig) String() string {
 	}
 	if o.Prague3.Time != nil {
 		banner += fmt.Sprintf("(%s)", o.Prague3)
+	}
+	if o.Prague4.Time != nil {
+		banner += fmt.Sprintf("(%s)", o.Prague4)
 	}
 	return banner
 }
@@ -700,6 +709,21 @@ func (c Prague3Config) String() string {
 			blocked = append(blocked, addr.String())
 		}
 		banner += fmt.Sprintf("(time: %v, bexVaultAddress: %v, blockedAddresses: [%s], rescueAddress: %v)", *c.Time, c.BexVaultAddress, strings.Join(blocked, ", "), c.RescueAddress)
+	}
+	return banner
+}
+
+// Prague4Config is the config values for the Prague4 fork on Berachain.
+type Prague4Config struct {
+	// Time is the time of the Prague4 fork.
+	Time *uint64 `json:"time,omitempty"` // Prague4 switch time (0 = already on prague4, nil = no fork)
+}
+
+// String implements the stringer interface.
+func (c Prague4Config) String() string {
+	banner := "prague4"
+	if c.Time != nil {
+		banner += fmt.Sprintf("(time: %v)", *c.Time)
 	}
 	return banner
 }
@@ -889,6 +913,9 @@ func (c *ChainConfig) Description() string {
 	if c.Berachain.Prague3.Time != nil {
 		banner += fmt.Sprintf(" - Prague3:                     %-10v\n", c.Berachain.Prague3)
 	}
+	if c.Berachain.Prague4.Time != nil {
+		banner += fmt.Sprintf(" - Prague4:                     %-10v\n", c.Berachain.Prague4)
+	}
 	if c.OsakaTime != nil {
 		banner += fmt.Sprintf(" - Osaka:                       @%-10v blob: (%s)\n", *c.OsakaTime, c.BlobScheduleConfig.Osaka)
 	}
@@ -1069,6 +1096,12 @@ func (c *ChainConfig) IsPrague3(num *big.Int, time uint64) bool {
 	return c.IsPrague(num, time) && isTimestampForked(c.Berachain.Prague3.Time, time)
 }
 
+// IsPrague4 returns whether time is either equal to the Prague4 fork time or greater.
+// NOTE: Prague4 is a Berachain fork and must be on Ethereum's Prague fork.
+func (c *ChainConfig) IsPrague4(num *big.Int, time uint64) bool {
+	return c.IsPrague(num, time) && isTimestampForked(c.Berachain.Prague4.Time, time)
+}
+
 // IsOsaka returns whether time is either equal to the Osaka fork time or greater.
 func (c *ChainConfig) IsOsaka(num *big.Int, time uint64) bool {
 	return c.IsLondon(num) && isTimestampForked(c.OsakaTime, time)
@@ -1185,6 +1218,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "prague1Time", timestamp: c.Berachain.Prague1.Time, optional: true},
 		{name: "prague2Time", timestamp: c.Berachain.Prague2.Time, optional: true},
 		{name: "prague3Time", timestamp: c.Berachain.Prague3.Time, optional: true},
+		{name: "prague4Time", timestamp: c.Berachain.Prague4.Time, optional: true},
 		{name: "osakaTime", timestamp: c.OsakaTime, optional: true},
 		{name: "verkleTime", timestamp: c.VerkleTime, optional: true},
 		{name: "bpo1", timestamp: c.BPO1Time, optional: true},
@@ -1375,6 +1409,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, headNumber *big.Int, 
 	if isForkTimestampIncompatible(c.Berachain.Prague3.Time, newcfg.Berachain.Prague3.Time, headTimestamp) {
 		return newTimestampCompatError("Prague3 fork timestamp", c.Berachain.Prague3.Time, newcfg.Berachain.Prague3.Time)
 	}
+	if isForkTimestampIncompatible(c.Berachain.Prague4.Time, newcfg.Berachain.Prague4.Time, headTimestamp) {
+		return newTimestampCompatError("Prague4 fork timestamp", c.Berachain.Prague4.Time, newcfg.Berachain.Prague4.Time)
+	}
 	if isForkTimestampIncompatible(c.OsakaTime, newcfg.OsakaTime, headTimestamp) {
 		return newTimestampCompatError("Osaka fork timestamp", c.OsakaTime, newcfg.OsakaTime)
 	}
@@ -1448,6 +1485,8 @@ func (c *ChainConfig) LatestFork(time uint64) forks.Fork {
 		return forks.BPO1
 	case c.IsOsaka(london, time):
 		return forks.Osaka
+	case c.IsPrague4(london, time):
+		return forks.Prague4
 	case c.IsPrague3(london, time):
 		return forks.Prague3
 	case c.IsPrague2(london, time):
@@ -1676,13 +1715,13 @@ func (err *ConfigCompatError) Error() string {
 // Rules is a one time interface meaning that it shouldn't be used in between transition
 // phases.
 type Rules struct {
-	ChainID                                                                           *big.Int
-	IsHomestead, IsEIP150, IsEIP155, IsEIP158                                         bool
-	IsEIP2929, IsEIP4762                                                              bool
-	IsByzantium, IsConstantinople, IsPetersburg, IsIstanbul                           bool
-	IsBerlin, IsLondon                                                                bool
-	IsMerge, IsShanghai, IsCancun, IsPrague, IsPrague1, IsPrague2, IsPrague3, IsOsaka bool
-	IsAmsterdam, IsVerkle                                                             bool
+	ChainID                                                                                      *big.Int
+	IsHomestead, IsEIP150, IsEIP155, IsEIP158                                                    bool
+	IsEIP2929, IsEIP4762                                                                         bool
+	IsByzantium, IsConstantinople, IsPetersburg, IsIstanbul                                      bool
+	IsBerlin, IsLondon                                                                           bool
+	IsMerge, IsShanghai, IsCancun, IsPrague, IsPrague1, IsPrague2, IsPrague3, IsPrague4, IsOsaka bool
+	IsAmsterdam, IsVerkle                                                                        bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -1714,6 +1753,7 @@ func (c *ChainConfig) Rules(num *big.Int, isMerge bool, timestamp uint64) Rules 
 		IsPrague1:        isMerge && c.IsPrague1(num, timestamp),
 		IsPrague2:        isMerge && c.IsPrague2(num, timestamp),
 		IsPrague3:        isMerge && c.IsPrague3(num, timestamp),
+		IsPrague4:        isMerge && c.IsPrague4(num, timestamp),
 		IsOsaka:          isMerge && c.IsOsaka(num, timestamp),
 		IsAmsterdam:      isMerge && c.IsAmsterdam(num, timestamp),
 		IsVerkle:         isVerkle,
