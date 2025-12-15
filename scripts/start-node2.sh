@@ -114,6 +114,11 @@ fi
 VALIDATOR_ADDRESS=$(cat "$VALIDATOR_ADDRESS_FILE" | tr -d '\n')
 PASSWORD=$(cat "$PASSWORD_FILE" 2>/dev/null || echo "validator123")
 
+# Create a temporary password file for --password flag
+TEMP_PASSWORD_FILE=$(mktemp)
+echo "$PASSWORD" > "$TEMP_PASSWORD_FILE"
+trap "rm -f $TEMP_PASSWORD_FILE" EXIT
+
 # Build geth command arguments with optimized settings for testnet
 GETH_ARGS=(
   --datadir "$DATADIR"
@@ -124,6 +129,9 @@ GETH_ARGS=(
   --ws --ws.addr "0.0.0.0" --ws.port "$WS_PORT"
   --ws.api "eth,net,web3,miner,admin"
   --authrpc.addr "0.0.0.0" --authrpc.port "$AUTH_PORT"
+  --unlock "$VALIDATOR_ADDRESS"
+  --password "$TEMP_PASSWORD_FILE"
+  --allow-insecure-unlock
   --maxpeers 1
   --nodiscover
   --cache 128
@@ -185,12 +193,15 @@ echo "🚀 Starting Node 2..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "💡 IMPORTANT: After both nodes start:"
-echo "   1. Create config.toml: ./scripts/create-config-toml.sh"
-echo "   2. Restart nodes to load config"
-echo "   3. Check peers: ./scripts/check-peers.sh"
+echo "   1. Run in another terminal: ./scripts/unlock-validators.sh"
+echo "      This will unlock validators and ensure blocks are produced"
+echo "   2. Or run: ./scripts/ensure-mining.sh (comprehensive check)"
 echo ""
 echo "   For Clique consensus, blocks will be created automatically"
 echo "   when validators are connected and accounts are unlocked."
+echo ""
+echo "   Note: The --unlock flag may not work properly with console mode,"
+echo "   so you may need to unlock manually or use the unlock script."
 echo ""
 echo "⚠️  To exit Node 2:"
 echo "   - Press Ctrl+C (not Ctrl+D) to stop the node"
@@ -199,7 +210,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Trap signals để shutdown gracefully
-trap 'echo ""; echo "🛑 Shutting down Node 2..."; exit 0' INT TERM
+trap 'echo ""; echo "🛑 Shutting down Node 2..."; rm -f $TEMP_PASSWORD_FILE; exit 0' INT TERM
 
 # Chạy geth
 ./build/bin/geth "${GETH_ARGS[@]}" console
