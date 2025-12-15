@@ -1,0 +1,82 @@
+{
+  "config": {
+    "chainId": 1337,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "berlinBlock": 0,
+    "londonBlock": 0,
+    "arrowGlacierBlock": 0,
+    "grayGlacierBlock": 0,
+    "mergeNetsplitBlock": 0,
+    "terminalTotalDifficulty": 0,
+    "clique": {
+      "period": 5,
+      "epoch": 30000
+    }
+  },
+  "difficulty": "1",
+  "gasLimit": "8000000",
+  "extradata": "0x000000000000000000000000000000000000000000000000000000000000000036d84c24395abc90006c3ff19292a54edf591ac3b49433628173fc5b51bf3af6b7f96c8efc1626ec0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "alloc": {
+    "0x36D84C24395ABC90006C3FF19292a54eDf591ac3": {
+      "balance": "1000000000000000000000000"
+    },
+    "0xB49433628173fc5b51bf3Af6B7F96c8EFc1626EC": {
+      "balance": "1000000000000000000000000"
+    },
+    "0x828b2c02e96dbfa1069081cfef60ad3720b0e0fc": {
+      "balance": "50000000000000000000"
+    },
+    "0x5e9949bdbfda2f726141e732127682df1a091be6": {
+      "balance": "50000000000000000000"
+    },
+    "0x7f18eefcd2e7ad292c20a5cadadd4a421b7530c2": {
+      "balance": "50000000000000000000"
+    },
+    "0x1a0de79637215360ec53184b54e22350b61bd554": {
+      "balance": "50000000000000000000"
+    },
+    "0x878d0d95909c23c27953515fb72c6c976bb1145a": {
+      "balance": "50000000000000000000"
+    },
+    "0xf3c3014ff62343de5cd76c9807c314358c6dd33c": {
+      "balance": "50000000000000000000"
+    },
+    "0xa9e83a7512b160ce727900afa02eccfdaddeed02": {
+      "balance": "50000000000000000000"
+    },
+    "0x91140f306920a461ab33aa1683d962c56979bbb6": {
+      "balance": "50000000000000000000"
+    },
+    "0x0f4545ffbae152f2a12036721c27097e99e1e508": {
+      "balance": "50000000000000000000"
+    },
+    "0xcec25593943bd38e278a7f700d984ed0a018c26e": {
+      "balance": "50000000000000000000"
+    },
+    "0xf8e038db5f168a4ccf65ce794a442aa00af61f44": {
+      "balance": "50000000000000000000"
+    },
+    "0x356981ee849c96fC40e78B0B22715345E57746fb": {
+      "balance": "50000000000000000000"
+    },
+    "0x3bE69C0DEf08196BEE31D463741Df2B92D3eaf8E": {
+      "balance": "50000000000000000000"
+    },
+    "0xC4fa658C3C835b316CaCB52338eD9ebbce2631D7": {
+      "balance": "50000000000000000000"
+    },
+    "0x1120CFB327baedC2f2638D75Db0935b7f3CC934b": {
+      "balance": "50000000000000000000"
+    },
+    "0x554bdA38d6635155b06Faa43189B52D9eD579f70": {
+      "balance": "50000000000000000000"
+    }
+  }
+}
