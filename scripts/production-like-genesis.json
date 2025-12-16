@@ -1,0 +1,78 @@
+{
+  "config": {
+    "chainId": 1337,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "muirGlacierBlock": 0,
+    "berlinBlock": 0,
+    "londonBlock": 0,
+    "arrowGlacierBlock": 0,
+    "grayGlacierBlock": 0,
+    "mergeNetsplitBlock": 0,
+    "terminalTotalDifficulty": 0,
+    "shanghaiTime": 0,
+    "cancunTime": 0,
+    "pragueTime": 0,
+    "osakaTime": 0,
+    "bpo1Time": 0,
+    "bpo2Time": 0,
+    "depositContractAddress": "0x4242424242424242424242424242424242424242",
+    "ethash": {},
+    "blobSchedule": {
+      "cancun": {
+        "target": 3,
+        "max": 6,
+        "baseFeeUpdateFraction": 3338477
+      },
+      "prague": {
+        "target": 6,
+        "max": 9,
+        "baseFeeUpdateFraction": 5007716
+      },
+      "osaka": {
+        "target": 6,
+        "max": 9,
+        "baseFeeUpdateFraction": 5007716
+      },
+      "bpo1": {
+        "target": 10,
+        "max": 15,
+        "baseFeeUpdateFraction": 8346193
+      },
+      "bpo2": {
+        "target": 14,
+        "max": 21,
+        "baseFeeUpdateFraction": 11684671
+      }
+    }
+  },
+  "difficulty": "0",
+  "gasLimit": "30000000",
+  "baseFeePerGas": "1000000000",
+  "timestamp": "0x0",
+  "extraData": "0x",
+  "alloc": {
+    "0x356981ee849c96fC40e78B0B22715345E57746fb": {
+      "balance": "1000000000000000000000"
+    },
+    "0x3bE69C0DEf08196BEE31D463741Df2B92D3eaf8E": {
+      "balance": "1000000000000000000000"
+    },
+    "0xC4fa658C3C835b316CaCB52338eD9ebbce2631D7": {
+      "balance": "1000000000000000000000"
+    },
+    "0x1120CFB327baedC2f2638D75Db0935b7f3CC934b": {
+      "balance": "1000000000000000000000"
+    },
+    "0x554bdA38d6635155b06Faa43189B52D9eD579f70": {
+      "balance": "1000000000000000000000"
+    }
+  }
+}
+
