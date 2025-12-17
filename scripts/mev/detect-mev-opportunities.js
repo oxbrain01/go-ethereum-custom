@@ -37,16 +37,27 @@ const MEV_TYPES = {
 };
 
 // Minimum profit thresholds (in ETH)
+// Lowered for testing - adjust based on your network
 const MIN_PROFIT_THRESHOLDS = {
-  [MEV_TYPES.ARBITRAGE]: 0.001, // 0.001 ETH
-  [MEV_TYPES.LIQUIDATION]: 0.01, // 0.01 ETH
-  [MEV_TYPES.SANDWICH]: 0.0005, // 0.0005 ETH
-  [MEV_TYPES.FRONT_RUN]: 0.005, // 0.005 ETH
-  [MEV_TYPES.BACK_RUN]: 0.001, // 0.001 ETH
-  [MEV_TYPES.JIT_LIQUIDITY]: 0.01, // 0.01 ETH
+  [MEV_TYPES.ARBITRAGE]: 0.00001, // 0.00001 ETH (lowered from 0.001)
+  [MEV_TYPES.LIQUIDATION]: 0.0001, // 0.0001 ETH (lowered from 0.01)
+  [MEV_TYPES.SANDWICH]: 0.00001, // 0.00001 ETH (lowered from 0.0005)
+  [MEV_TYPES.FRONT_RUN]: 0.0001, // 0.0001 ETH (lowered from 0.005)
+  [MEV_TYPES.BACK_RUN]: 0.00001, // 0.00001 ETH (lowered from 0.001)
+  [MEV_TYPES.JIT_LIQUIDITY]: 0.0001, // 0.0001 ETH (lowered from 0.01)
 };
 
+// Enable debug logging
+const DEBUG = process.env.DEBUG === "true" || process.env.DEBUG === "1";
+// Show all transactions (even if no MEV opportunity)
+const SHOW_ALL_TXS =
+  process.env.SHOW_ALL === "true" || process.env.SHOW_ALL === "1";
+
 let opportunityCount = 0;
+let transactionCount = 0;
+let swapCount = 0;
+let ethTransferCount = 0;
+let unknownTxCount = 0;
 
 /**
  * Make HTTP RPC call
@@ -150,47 +161,204 @@ async function getMempoolContent() {
 }
 
 /**
- * Check if transaction is a swap
+ * Common DEX swap function signatures (first 4 bytes of keccak256)
  */
-function isSwapTransaction(tx) {
-  if (!tx || !tx.to) return false;
+const SWAP_FUNCTION_SIGNATURES = {
+  // Uniswap V2
+  swapExactETHForTokens: "0x7ff36ab5",
+  swapETHForExactTokens: "0x4a25d94a",
+  swapExactTokensForETH: "0x18cbafe5",
+  swapTokensForExactETH: "0x4a25d94a",
+  swapExactTokensForTokens: "0x38ed1739",
+  swapTokensForExactTokens: "0x8803dbee",
+  // Uniswap V3
+  exactInputSingle: "0x414bf389",
+  exactInput: "0xc04b8d59",
+  exactOutputSingle: "0xdb3e2198",
+  exactOutput: "0xf28c0498",
+  // Generic swap
+  swap: "0x022c0d9f",
+  // Add more as needed
+};
 
-  // Common DEX contract addresses (example - adjust for your network)
-  const dexAddresses = [
-    "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D", // Uniswap V2 Router
-    "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F", // Sushiswap Router
-    // Add more DEX addresses
-  ];
-
-  return dexAddresses.some((addr) =>
-    tx.to.toLowerCase().includes(addr.toLowerCase())
-  );
+/**
+ * Check if transaction is a simple ETH transfer (no input data or empty input)
+ */
+function isETHTransfer(tx) {
+  if (!tx) return false;
+  // ETH transfer: has value > 0 and (no input data OR input is just "0x" OR input is "0x")
+  const hasValue = tx.value && parseInt(tx.value, 16) > 0;
+  const hasNoInput = !tx.input || tx.input === "0x" || tx.input.length <= 2;
+  return hasValue && hasNoInput;
 }
 
 /**
- * Check if transaction is a liquidation
+ * Check if transaction is a swap by analyzing input data
+ * @param {Object} tx - Transaction object
+ * @param {boolean} incrementCount - Whether to increment swapCount (default: false to avoid double-counting)
  */
-function isLiquidationTransaction(tx) {
+function isSwapTransaction(tx, incrementCount = false) {
+  if (!tx || !tx.input || tx.input.length < 10) return false;
+
+  // Check if input data starts with a known swap function signature
+  const inputPrefix = tx.input.toLowerCase().substring(0, 10); // 0x + 4 bytes = 10 chars
+
+  const isSwap = Object.values(SWAP_FUNCTION_SIGNATURES).some(
+    (sig) => inputPrefix === sig.toLowerCase()
+  );
+
+  if (isSwap && incrementCount) {
+    swapCount++;
+    if (DEBUG) {
+      console.log(`   🔄 Detected swap function: ${inputPrefix}`);
+    }
+  }
+
+  return isSwap;
+}
+
+/**
+ * Check if transaction targets known DEX router (optional, for additional filtering)
+ */
+function isKnownDEXRouter(tx) {
   if (!tx || !tx.to) return false;
 
-  // Common lending protocol addresses
-  const lendingProtocols = [
-    "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9", // Aave Lending Pool
-    "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B", // Compound Comptroller
-    // Add more protocol addresses
+  // Common DEX contract addresses (Mainnet - adjust for your network)
+  // Note: On testnet/local, these addresses might not exist
+  // So we primarily rely on function signature detection
+  const dexAddresses = [
+    "0x7a250d5630b4cf539739df2c5dacb4c659f2488d", // Uniswap V2 Router
+    "0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f", // Sushiswap Router
+    "0xe592427a0aece92de3edee1f18e0157c05861564", // Uniswap V3 Router
+    // Add more DEX addresses as needed
   ];
 
-  return lendingProtocols.some((addr) =>
-    tx.to.toLowerCase().includes(addr.toLowerCase())
+  return dexAddresses.includes(tx.to.toLowerCase());
+}
+
+/**
+ * Common liquidation function signatures
+ */
+const LIQUIDATION_FUNCTION_SIGNATURES = {
+  liquidateBorrow: "0x2986c0e5",
+  liquidationCall: "0xea8a1af0",
+  liquidate: "0xdb005a1c",
+  // Add more as needed
+};
+
+/**
+ * Check if transaction is a liquidation by analyzing input data
+ */
+function isLiquidationTransaction(tx) {
+  if (!tx || !tx.input) return false;
+
+  // Check if input data starts with a known liquidation function signature
+  const inputPrefix = tx.input.toLowerCase().substring(0, 10);
+
+  const isLiquidation = Object.values(LIQUIDATION_FUNCTION_SIGNATURES).some(
+    (sig) => inputPrefix === sig.toLowerCase()
   );
+
+  if (DEBUG && isLiquidation) {
+    console.log(`   💧 Detected liquidation function: ${inputPrefix}`);
+  }
+
+  return isLiquidation;
+}
+
+/**
+ * Check if transaction targets known lending protocol (optional)
+ */
+function isKnownLendingProtocol(tx) {
+  if (!tx || !tx.to) return false;
+
+  // Common lending protocol addresses (Mainnet - adjust for your network)
+  const lendingProtocols = [
+    "0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9", // Aave Lending Pool
+    "0x3d9819210a31b4961b30ef54be2aed79b9c9cd3b", // Compound Comptroller
+    // Add more protocol addresses as needed
+  ];
+
+  return lendingProtocols.includes(tx.to.toLowerCase());
 }
 
 /**
  * Parse swap amount from transaction
+ * Tries multiple methods:
+ * 1. tx.value (for ETH swaps)
+ * 2. Extract from input data (for token swaps)
  */
 function parseSwapAmount(tx) {
-  if (!tx || !tx.value) return 0;
-  return parseInt(tx.value, 16) / 1e18; // Convert from Wei to ETH
+  if (!tx) return 0;
+
+  // Method 1: Check tx.value (for ETH swaps like swapExactETHForTokens)
+  if (tx.value) {
+    const ethValue = parseInt(tx.value, 16) / 1e18;
+    if (ethValue > 0) {
+      if (DEBUG) {
+        console.log(`   💰 Found ETH value: ${ethValue} ETH`);
+      }
+      return ethValue;
+    }
+  }
+
+  // Method 2: Try to extract amount from input data
+  // This is simplified - in production you'd properly decode ABI
+  if (tx.input && tx.input.length >= 138) {
+    // Most swap functions have amount as first or second parameter (32 bytes = 64 hex chars)
+    // Skip function selector (10 chars) and try to parse amount
+    try {
+      // For swapExactTokensForETH, amountIn is at position 10-74 (32 bytes)
+      // For swapExactETHForTokens, amountOutMin is at position 10-74, but amount is in value
+      // This is a heuristic - proper decoding would use ABI
+      const amountHex = "0x" + tx.input.substring(10, 74); // First parameter after selector
+      const amount = parseInt(amountHex, 16);
+
+      // If amount looks reasonable (not zero, not too large), use it
+      if (amount > 0 && amount < 1e30) {
+        // Assume 18 decimals for tokens (convert to ETH equivalent for display)
+        const tokenAmount = amount / 1e18;
+        if (tokenAmount > 0.000001 && tokenAmount < 1000000) {
+          if (DEBUG) {
+            console.log(
+              `   💰 Extracted amount from input: ${tokenAmount} (token units)`
+            );
+          }
+          // Return as ETH equivalent for profit calculation
+          // In production, you'd convert using actual token prices
+          return tokenAmount * 0.001; // Rough estimate: assume token ~$0.001 ETH equivalent
+        }
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+  }
+
+  // Method 3: If no value and can't parse input, return 0
+  // But don't reject the transaction - let other checks decide
+  return 0;
+}
+
+/**
+ * Get minimum meaningful amount threshold based on transaction type
+ */
+function getMinimumAmount(mevType) {
+  switch (mevType) {
+    case MEV_TYPES.ARBITRAGE:
+      return 0.001; // 0.001 ETH equivalent
+    case MEV_TYPES.SANDWICH:
+      return 0.01; // 0.01 ETH equivalent
+    case MEV_TYPES.FRONT_RUN:
+      return 0.01; // 0.01 ETH equivalent
+    case MEV_TYPES.BACK_RUN:
+      return 0.01; // 0.01 ETH equivalent
+    case MEV_TYPES.LIQUIDATION:
+      return 0.001; // 0.001 ETH equivalent
+    case MEV_TYPES.JIT_LIQUIDITY:
+      return 0.1; // 0.1 ETH equivalent
+    default:
+      return 0.001;
+  }
 }
 
 /**
@@ -213,12 +381,21 @@ async function detectArbitrage(tx) {
   if (!isSwapTransaction(tx)) return null;
 
   const amount = parseSwapAmount(tx);
-  if (amount < 1) return null; // Too small
+  const minAmount = getMinimumAmount(MEV_TYPES.ARBITRAGE);
+
+  if (DEBUG) {
+    console.log(`   🔍 Arbitrage check: amount=${amount}, min=${minAmount}`);
+  }
+
+  // Lower threshold for testing - accept any swap with value
+  if (amount < minAmount && amount === 0) return null; // Only reject if truly zero
 
   // Simulated arbitrage detection
   // In production, you would query actual DEX prices
   const simulatedPriceDiff = 0.001; // 0.1% price difference
-  const estimatedProfit = amount * simulatedPriceDiff;
+  // Use minimum amount if parsed amount is too small
+  const effectiveAmount = amount > 0 ? amount : minAmount;
+  const estimatedProfit = effectiveAmount * simulatedPriceDiff;
   const gasPrice = await getCurrentGasPrice();
   const gasCost = estimateGasCost(gasPrice, 150000); // ~150k gas for arbitrage
   const netProfit = estimatedProfit - gasCost;
@@ -229,9 +406,10 @@ async function detectArbitrage(tx) {
       profit: netProfit,
       confidence: 0.6, // 60% confidence (simulated)
       details: {
-        amount,
+        amount: effectiveAmount,
         priceDiff: simulatedPriceDiff,
         gasCost,
+        note: "Simulated - requires actual DEX price comparison",
       },
     };
   }
@@ -246,7 +424,42 @@ async function detectSandwich(tx) {
   if (!isSwapTransaction(tx)) return null;
 
   const amount = parseSwapAmount(tx);
-  if (amount < 5) return null; // Need large swap for sandwich
+  const minAmount = getMinimumAmount(MEV_TYPES.SANDWICH);
+
+  if (DEBUG) {
+    console.log(`   🔍 Sandwich check: amount=${amount}, min=${minAmount}`);
+  }
+
+  // Accept any swap - lower threshold for testing
+  if (amount === 0) {
+    // Even if amount is 0, still consider it if it's a swap
+    // (might be token-to-token swap where value is 0)
+    const effectiveAmount = minAmount;
+
+    // Estimate price impact
+    const estimatedPriceImpact = 0.005; // 0.5% price impact
+    const frontRunAmount = effectiveAmount * 0.5; // 50% of user's swap
+    const estimatedProfit = frontRunAmount * estimatedPriceImpact;
+    const gasPrice = await getCurrentGasPrice();
+    const gasCost = estimateGasCost(gasPrice, 300000); // ~300k gas for 2 txs
+    const netProfit = estimatedProfit - gasCost;
+
+    if (netProfit > MIN_PROFIT_THRESHOLDS[MEV_TYPES.SANDWICH]) {
+      return {
+        type: MEV_TYPES.SANDWICH,
+        profit: netProfit,
+        confidence: 0.3, // Lower confidence if amount unknown
+        details: {
+          userAmount: effectiveAmount,
+          frontRunAmount,
+          priceImpact: estimatedPriceImpact,
+          gasCost,
+          note: "Token swap detected - estimated amount",
+        },
+      };
+    }
+    return null;
+  }
 
   // Estimate price impact
   const estimatedPriceImpact = 0.005; // 0.5% price impact
@@ -284,8 +497,39 @@ async function detectFrontRun(tx) {
   // - Governance votes
   // - etc.
 
+  // Only check swaps for front-running (they're most profitable)
+  if (!isSwapTransaction(tx)) return null;
+
   const amount = parseSwapAmount(tx);
-  if (amount < 10) return null; // Need significant amount
+  const minAmount = getMinimumAmount(MEV_TYPES.FRONT_RUN);
+
+  if (DEBUG) {
+    console.log(`   🔍 Front-run check: amount=${amount}, min=${minAmount}`);
+  }
+
+  // Lower threshold - accept any swap
+  if (amount === 0) {
+    const effectiveAmount = minAmount;
+    const estimatedProfit = effectiveAmount * 0.02; // 2% profit
+    const gasPrice = await getCurrentGasPrice();
+    const gasCost = estimateGasCost(gasPrice, 100000);
+    const netProfit = estimatedProfit - gasCost;
+
+    if (netProfit > MIN_PROFIT_THRESHOLDS[MEV_TYPES.FRONT_RUN]) {
+      return {
+        type: MEV_TYPES.FRONT_RUN,
+        profit: netProfit,
+        confidence: 0.2, // Lower confidence if amount unknown
+        details: {
+          amount: effectiveAmount,
+          estimatedProfit,
+          gasCost,
+          note: "Token swap detected - estimated amount",
+        },
+      };
+    }
+    return null;
+  }
 
   // Simulated front-run opportunity
   const estimatedProfit = amount * 0.02; // 2% profit
@@ -321,11 +565,18 @@ async function detectLiquidation(tx) {
   // 3. Detect when health factor < 1.0
 
   const amount = parseSwapAmount(tx);
-  if (amount < 1) return null;
+  const minAmount = getMinimumAmount(MEV_TYPES.LIQUIDATION);
+
+  if (DEBUG) {
+    console.log(`   🔍 Liquidation check: amount=${amount}, min=${minAmount}`);
+  }
+
+  // Lower threshold - accept any liquidation
+  const effectiveAmount = amount > 0 ? amount : minAmount;
 
   // Simulated liquidation opportunity
   const liquidationBonus = 0.05; // 5% bonus
-  const estimatedProfit = amount * liquidationBonus;
+  const estimatedProfit = effectiveAmount * liquidationBonus;
   const gasPrice = await getCurrentGasPrice();
   const gasCost = estimateGasCost(gasPrice, 200000);
   const netProfit = estimatedProfit - gasCost;
@@ -336,9 +587,10 @@ async function detectLiquidation(tx) {
       profit: netProfit,
       confidence: 0.4, // 40% confidence (high competition)
       details: {
-        amount,
+        amount: effectiveAmount,
         liquidationBonus,
         gasCost,
+        note: amount === 0 ? "Estimated amount from liquidation" : undefined,
       },
     };
   }
@@ -357,7 +609,40 @@ async function detectBackRun(tx) {
   if (!isSwapTransaction(tx)) return null;
 
   const amount = parseSwapAmount(tx);
-  if (amount < 10) return null; // Need significant amount to create price impact
+  const minAmount = getMinimumAmount(MEV_TYPES.BACK_RUN);
+
+  if (DEBUG) {
+    console.log(`   🔍 Back-run check: amount=${amount}, min=${minAmount}`);
+  }
+
+  // Lower threshold - accept any swap
+  if (amount === 0) {
+    const effectiveAmount = minAmount;
+    const estimatedPriceImpact = 0.005; // 0.5% price impact
+    const recoveryRate = 0.5; // Assume 50% price recovery
+    const backRunAmount = effectiveAmount * 0.3; // 30% of user's swap
+    const estimatedProfit = backRunAmount * estimatedPriceImpact * recoveryRate;
+    const gasPrice = await getCurrentGasPrice();
+    const gasCost = estimateGasCost(gasPrice, 150000); // ~150k gas for back-run
+    const netProfit = estimatedProfit - gasCost;
+
+    if (netProfit > MIN_PROFIT_THRESHOLDS[MEV_TYPES.BACK_RUN]) {
+      return {
+        type: MEV_TYPES.BACK_RUN,
+        profit: netProfit,
+        confidence: 0.4, // Lower confidence if amount unknown
+        details: {
+          userAmount: effectiveAmount,
+          backRunAmount,
+          priceImpact: estimatedPriceImpact,
+          recoveryRate,
+          gasCost,
+          note: "Token swap detected - estimated amount",
+        },
+      };
+    }
+    return null;
+  }
 
   // Estimate price impact and recovery potential
   const estimatedPriceImpact = 0.005; // 0.5% price impact
@@ -387,32 +672,53 @@ async function detectBackRun(tx) {
 }
 
 /**
+ * Common liquidity function signatures
+ */
+const LIQUIDITY_FUNCTION_SIGNATURES = {
+  addLiquidity: "0xe8e33700",
+  addLiquidityETH: "0xf305d719",
+  mint: "0x88316456", // Uniswap V3
+  increaseLiquidity: "0x219f5d17", // Uniswap V3
+  // Add more as needed
+};
+
+/**
  * Detect JIT (Just-In-Time) Liquidity Opportunity
  */
 async function detectJITLiquidity(tx) {
   // JIT liquidity: Add liquidity before large swap, remove after
   // This requires detecting addLiquidity transactions
 
-  if (!tx || !tx.to) return null;
+  if (!tx || !tx.input) return null;
 
-  // Common liquidity pool addresses (Uniswap V3, etc.)
-  const liquidityPoolAddresses = [
-    "0xC36442b4a4522E871399CD717aBDD847Ab11FE88", // Uniswap V3 Position Manager
-    // Add more liquidity pool addresses
-  ];
+  // Check if input data starts with a known liquidity function signature
+  const inputPrefix = tx.input.toLowerCase().substring(0, 10);
 
-  const isLiquidityTx = liquidityPoolAddresses.some((addr) =>
-    tx.to.toLowerCase().includes(addr.toLowerCase())
+  const isLiquidityTx = Object.values(LIQUIDITY_FUNCTION_SIGNATURES).some(
+    (sig) => inputPrefix === sig.toLowerCase()
   );
 
   if (!isLiquidityTx) return null;
 
+  if (DEBUG) {
+    console.log(`   💧 Detected liquidity function: ${inputPrefix}`);
+  }
+
   const amount = parseSwapAmount(tx);
-  if (amount < 50) return null; // Need significant liquidity addition
+  const minAmount = getMinimumAmount(MEV_TYPES.JIT_LIQUIDITY);
+
+  if (DEBUG) {
+    console.log(
+      `   🔍 JIT Liquidity check: amount=${amount}, min=${minAmount}`
+    );
+  }
+
+  // Use minimum amount if parsed amount is too small
+  const effectiveAmount = amount > 0 ? amount : minAmount;
 
   // Estimate fees from swaps in the same block
   // In reality, you would monitor for large swaps after liquidity addition
-  const estimatedFees = amount * 0.001; // 0.1% fees (simplified)
+  const estimatedFees = effectiveAmount * 0.001; // 0.1% fees (simplified)
   const gasPrice = await getCurrentGasPrice();
   const gasCost = estimateGasCost(gasPrice, 400000); // ~400k gas (add + remove)
   const netProfit = estimatedFees - gasCost;
@@ -423,7 +729,7 @@ async function detectJITLiquidity(tx) {
       profit: netProfit,
       confidence: 0.7, // 70% confidence (requires coordination)
       details: {
-        liquidityAmount: amount,
+        liquidityAmount: effectiveAmount,
         estimatedFees,
         gasCost,
         note: "Requires detecting large swap in same block",
@@ -439,8 +745,68 @@ async function detectJITLiquidity(tx) {
  */
 async function analyzeTransaction(txHash) {
   try {
+    transactionCount++;
     const tx = await getTransaction(txHash);
-    if (!tx) return null;
+    if (!tx) {
+      if (DEBUG) {
+        console.log(
+          `   ⚠️  Transaction ${txHash} not found (might be mined already)`
+        );
+      }
+      return null;
+    }
+
+    // Categorize transaction (increment counters here to avoid double-counting)
+    const isSwap = isSwapTransaction(tx, true); // increment count
+    const isETH = isETHTransfer(tx);
+    const isLiquidation = isLiquidationTransaction(tx);
+
+    if (isETH) {
+      ethTransferCount++;
+    } else if (!isSwap && !isLiquidation) {
+      unknownTxCount++;
+    }
+
+    if (DEBUG || SHOW_ALL_TXS) {
+      console.log(
+        `\n   📝 Transaction #${transactionCount}: ${txHash.substring(
+          0,
+          16
+        )}...`
+      );
+      console.log(`   📍 To: ${tx.to || "Contract Creation"}`);
+      const ethValue = tx.value ? parseInt(tx.value, 16) / 1e18 : 0;
+      console.log(`   💰 Value: ${ethValue} ETH`);
+      console.log(
+        `   📊 Input length: ${tx.input ? tx.input.length : 0} chars`
+      );
+
+      if (isETH) {
+        console.log(`   ✅ Type: ETH Transfer`);
+      } else if (tx.input && tx.input.length >= 10) {
+        const funcSig = tx.input.substring(2, 10);
+        console.log(`   🔑 Function: 0x${funcSig}`);
+
+        // Check if it matches any known signatures
+        const allSignatures = {
+          ...SWAP_FUNCTION_SIGNATURES,
+          ...LIQUIDATION_FUNCTION_SIGNATURES,
+          ...LIQUIDITY_FUNCTION_SIGNATURES,
+        };
+        const matchingFunc = Object.entries(allSignatures).find(
+          ([_, sig]) => sig.toLowerCase() === `0x${funcSig}`.toLowerCase()
+        );
+        if (matchingFunc) {
+          console.log(`   ✅ Recognized as: ${matchingFunc[0]}`);
+        } else {
+          console.log(`   ❓ Unknown function signature`);
+        }
+      } else {
+        console.log(
+          `   ⚠️  No function signature (contract creation or empty input)`
+        );
+      }
+    }
 
     const opportunities = [];
 
@@ -463,9 +829,23 @@ async function analyzeTransaction(txHash) {
     const jitLiquidity = await detectJITLiquidity(tx);
     if (jitLiquidity) opportunities.push(jitLiquidity);
 
+    if ((DEBUG || SHOW_ALL_TXS) && opportunities.length === 0) {
+      if (isETH) {
+        console.log(`   ℹ️  ETH transfer - no MEV opportunity`);
+      } else if (isSwap) {
+        console.log(
+          `   ⚠️  Swap detected but no profitable MEV opportunity found`
+        );
+      } else {
+        console.log(`   ❌ No MEV opportunities found for this transaction`);
+      }
+    }
+
     return opportunities.length > 0 ? opportunities : null;
   } catch (e) {
-    console.error(`Error analyzing transaction ${txHash}:`, e.message);
+    if (DEBUG) {
+      console.error(`   ❌ Error analyzing transaction ${txHash}:`, e.message);
+    }
     return null;
   }
 }
@@ -524,6 +904,16 @@ async function startMonitoring() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`🔌 WebSocket: ${WS_URL}`);
   console.log(`🌐 HTTP RPC: ${HTTP_URL}`);
+  console.log(
+    `🐛 Debug Mode: ${
+      DEBUG ? "ENABLED" : "DISABLED"
+    } (set DEBUG=true to enable)`
+  );
+  console.log(
+    `📋 Show All Transactions: ${
+      SHOW_ALL_TXS ? "ENABLED" : "DISABLED"
+    } (set SHOW_ALL=true to enable)`
+  );
   console.log("💡 Monitoring mempool for MEV opportunities...");
   console.log("💡 Press Ctrl+C to stop");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -567,11 +957,28 @@ async function startMonitoring() {
       if (message.params && message.params.result) {
         const txHash = message.params.result;
 
+        // Show basic transaction info (always, not just in debug mode)
+        if (!DEBUG && !SHOW_ALL_TXS) {
+          // Basic logging: show transaction count with stats
+          process.stdout.write(
+            `\r🔔 Tx #${
+              transactionCount + 1
+            } | Swaps: ${swapCount} | ETH: ${ethTransferCount} | Other: ${unknownTxCount} | MEV: ${opportunityCount}`
+          );
+        }
+
         // Analyze transaction for MEV opportunities
         const opportunities = await analyzeTransaction(txHash);
 
         if (opportunities && opportunities.length > 0) {
+          if (!DEBUG && !SHOW_ALL_TXS) {
+            // Clear the line before showing opportunity
+            process.stdout.write("\r" + " ".repeat(100) + "\r");
+          }
           displayOpportunity(txHash, opportunities);
+        } else if (!DEBUG && !SHOW_ALL_TXS) {
+          // Continue showing stats on same line
+          // (the line is already updated above)
         }
       }
     } catch (e) {
@@ -592,8 +999,33 @@ async function startMonitoring() {
 
   // Handle Ctrl+C
   process.on("SIGINT", () => {
+    // Clear the progress line
+    if (!DEBUG && !SHOW_ALL_TXS) {
+      process.stdout.write("\r" + " ".repeat(100) + "\r");
+    }
+
     console.log("\n\n📊 Summary:");
-    console.log(`   Total opportunities detected: ${opportunityCount}`);
+    console.log(`   Total transactions analyzed: ${transactionCount}`);
+    console.log(`   - Swaps detected: ${swapCount}`);
+    console.log(`   - ETH transfers: ${ethTransferCount}`);
+    console.log(`   - Other transactions: ${unknownTxCount}`);
+    console.log(`   Total MEV opportunities detected: ${opportunityCount}`);
+    if (transactionCount > 0) {
+      console.log(
+        `   MEV detection rate: ${(
+          (opportunityCount / transactionCount) *
+          100
+        ).toFixed(2)}%`
+      );
+      if (swapCount > 0) {
+        console.log(
+          `   MEV rate among swaps: ${(
+            (opportunityCount / swapCount) *
+            100
+          ).toFixed(2)}%`
+        );
+      }
+    }
     console.log("\n👋 Stopping...");
     ws.close();
     process.exit(0);
