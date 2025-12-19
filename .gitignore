@@ -62,3 +62,6 @@ node_modules/
 package-lock.json
 scripts/test-accounts.json
 scripts/default-test-accounts.json
+
+scripts/start-prod/data
+scripts/start-prod/config.toml
