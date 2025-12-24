@@ -6,7 +6,9 @@ Script này tạo và chạy một blockchain Ethereum mới từ đầu, không
 
 - **Chain ID**: 2026
 - **Network ID**: 2026
-- **Consensus**: Proof of Stake (Ethereum 2.0)
+- **Consensus**: Proof of Authority (POA - Clique)
+- **Block Period**: 5 seconds
+- **Epoch**: 30000 blocks
 - **Gas Limit**: 30,000,000
 - **Base Fee**: 1 Gwei
 
