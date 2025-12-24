@@ -1,0 +1,36 @@
+{
+  "config": {
+    "chainId": 1337,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "berlinBlock": 0,
+    "londonBlock": 0,
+    "arrowGlacierBlock": 0,
+    "grayGlacierBlock": 0,
+    "mergeNetsplitBlock": 0,
+    "terminalTotalDifficulty": 0,
+    "shanghaiTime": 0,
+    "cancunTime": 0,
+    "pragueTime": 0,
+    "depositContractAddress": "0x0000000000000000000000000000000000000000"
+  },
+  "difficulty": "0",
+  "gasLimit": "30000000",
+  "baseFeePerGas": "1000000000",
+  "timestamp": "0x0",
+  "extraData": "0x",
+  "alloc": {
+    "0x0000000000000000000000000000000000000001": {
+      "balance": "1000000000000000000000000"
+    },
+    "0x0000000000000000000000000000000000000002": {
+      "balance": "1000000000000000000000000"
+    }
+  }
+}
