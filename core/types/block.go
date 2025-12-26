@@ -419,7 +419,7 @@ func (b *Block) BaseFee() *big.Int {
 func (b *Block) BeaconRoot() *common.Hash   { return b.header.ParentBeaconRoot }
 func (b *Block) RequestsHash() *common.Hash { return b.header.RequestsHash }
 // ===InsChain specific header fields ===
-func (b *Block) ParentProposerPubkey() *common.Pubkey { return b.header.ParentProposerPubkey }
+func (b *Block) ProposerPubkey() *common.Pubkey { return b.header.ParentProposerPubkey }
 // ===END OF InsChain specific header fields ===
 func (b *Block) ExcessBlobGas() *uint64 {
 	var excessBlobGas *uint64
