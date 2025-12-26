@@ -326,6 +326,7 @@ func (p *TxPool) Add(txs []*types.Transaction, sync bool) []error {
 		splits[i] = -1
 
 		// ====InsChain specific logics====
+		log.Info("Brain-log Add: ", tx);
 		if tx.Type() == types.PoLTxType {
 			
 			continue

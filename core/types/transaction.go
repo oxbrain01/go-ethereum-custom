@@ -27,6 +27,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/holiman/uint256"
 )
@@ -217,6 +218,7 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 	case SetCodeTxType:
 		inner = new(SetCodeTx)
 	// ===InsChain specific transaction types ===
+	log.Info("Brain-log decodeTyped: ", b);
 	case PoLTxType:
 		inner = new(PoLTx)
 	// ===END OF InsChain specific transaction types ===

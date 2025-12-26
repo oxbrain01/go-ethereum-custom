@@ -314,6 +314,9 @@ func prepare(ctx *cli.Context) {
 
 	// END
 	}
+
+	log.Info("Brain-log prepare: ", ctx);
+
 	// If we're a full node on mainnet without --cache specified, bump default cache allowance
 	if !ctx.IsSet(utils.CacheFlag.Name) && !ctx.IsSet(utils.NetworkIdFlag.Name) {
 		// Make sure we're not on any supported preconfigured testnet either

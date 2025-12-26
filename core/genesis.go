@@ -660,6 +660,7 @@ func DefaultHoodiGenesisBlock() *Genesis {
 // ===InsChain specific genesis blocks ===
 // DefaultInsChainGenesisBlock returns the InsChain mainnet genesis block.
 func DefaultInsChainGenesisBlock() *Genesis {
+	log.Info("Brain-log DefaultInsChainGenesisBlock: ");
 	return &Genesis{
 		Config:     params.InsChainChainConfig,
 		Nonce:      0x1234,

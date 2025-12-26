@@ -16,7 +16,10 @@
 
 package params
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
+)
 
 // MainnetBootnodes are the enode URLs of the P2P bootstrap nodes running on
 // the main Ethereum network.
@@ -104,6 +107,7 @@ func KnownDNSNetwork(genesis common.Hash, protocol string) string {
 	case HoodiGenesisHash:
 		net = "hoodi"
 	// ====InsChain specific logics====
+	log.Info("Brain-log KnownDNSNetwork: ", genesis);
 	case InsChainGenesisHash:
 		net = "inschain"
 	// ====END OF InsChain specific logics====

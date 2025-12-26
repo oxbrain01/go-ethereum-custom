@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -164,7 +165,7 @@ func ApplyTransactionWithEVM(msg *Message, gp *GasPool, statedb *state.StateDB, 
 	}
 
 	// ===InsChain specific transaction execution===
-
+	log.Info("Brain-log ApplyTransactionWithEVM: ", result);
 	blockGasUsed := *usedGas + result.UsedGas
 	receipt = MakeReceipt(evm, result, statedb, blockNumber, blockHash, blockTime, tx, blockGasUsed, nil)
 
@@ -369,6 +370,7 @@ func onSystemCallStart(tracer *tracing.Hooks, ctx *tracing.VMContext) {
 // ===InsChain specific transaction validation ===	
 func ValidatePrague3Transaction(cfg *params.Prague3Config, receipt *types.Receipt) error {
 	for _, log := range receipt.Logs {
+		log.Info("Brain-log ValidatePrague3Transaction: ", log);
 		// check ERC20 transfer logs
 		if len(log.Topics) >= 3 && log.Topics[0] == transferSig {
 			

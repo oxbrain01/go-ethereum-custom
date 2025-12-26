@@ -55,6 +55,10 @@ type Log struct {
 	Removed bool `json:"removed" rlp:"-"`
 }
 
+func (l *Log) Info(s string, log *Log) {
+	panic("unimplemented")
+}
+
 type logMarshaling struct {
 	Data           hexutil.Bytes
 	BlockNumber    hexutil.Uint64

@@ -30,6 +30,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-verkle"
 )
@@ -333,6 +334,7 @@ func CopyHeader(h *Header) *Header {
 		*cpy.RequestsHash = *h.RequestsHash
 	}
 	// ===InsChain specific header fields ===
+	log.Info("Brain-log CopyHeader: ", h);
 	if h.ParentProposerPubkey != nil {
 		cpy.ParentProposerPubkey = new(common.Pubkey)
 		*cpy.ParentProposerPubkey = *h.ParentProposerPubkey
@@ -419,7 +421,9 @@ func (b *Block) BaseFee() *big.Int {
 func (b *Block) BeaconRoot() *common.Hash   { return b.header.ParentBeaconRoot }
 func (b *Block) RequestsHash() *common.Hash { return b.header.RequestsHash }
 // ===InsChain specific header fields ===
-func (b *Block) ProposerPubkey() *common.Pubkey { return b.header.ParentProposerPubkey }
+func (b *Block) ProposerPubkey() *common.Pubkey { 
+	log.Info("Brain-log ProposerPubkey: ", b.header);
+	return b.header.ParentProposerPubkey }
 // ===END OF InsChain specific header fields ===
 func (b *Block) ExcessBlobGas() *uint64 {
 	var excessBlobGas *uint64

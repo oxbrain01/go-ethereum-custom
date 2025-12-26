@@ -445,6 +445,7 @@ func (args *TransactionArgs) CallDefaults(globalGasCap uint64, baseFee *big.Int,
 // Assumes that fields are not nil, i.e. setDefaults or CallDefaults has been called.
 // ====InsChain specific logics====
 func (args *TransactionArgs) ToMessage(baseFee *big.Int, skipNonceCheck bool, isPrague1 bool, distributorAddress common.Address) *core.Message {
+	log.Info("Brain-log ToMessage: ", baseFee);
 	// END
 	var (
 		gasPrice  *big.Int
@@ -501,6 +502,7 @@ func (args *TransactionArgs) ToMessage(baseFee *big.Int, skipNonceCheck bool, is
 // This assumes that setDefaults has been called.
 // ====InsChain specific logics====
 func (args *TransactionArgs) ToTransaction(defaultType int, isPrague1 bool, distributorAddress common.Address) *types.Transaction {
+	log.Info("Brain-log ToTransaction: ", defaultType);
 	// END
 	usedType := types.LegacyTxType
 	switch {

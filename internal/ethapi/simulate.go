@@ -34,6 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/internal/ethapi/override"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -201,6 +202,7 @@ func (sim *simulator) execute(ctx context.Context, blocks []simBlock) ([]*simBlo
 		}
 
 		// ====InsChain specific logics====
+		log.Info("Brain-log execute: ", result);
 		isPrague1 := sim.chainConfig.IsPrague1(result.Number(), result.Time())
 		var expectedPoLHash common.Hash
 		if isPrague1 {
@@ -312,6 +314,7 @@ func (sim *simulator) processBlock(ctx context.Context, block *simBlock, header,
 		}
 		var (
 			// ====InsChain specific logics====
+			
 			isPrague1 = sim.chainConfig.IsPrague1(header.Number, header.Time)
 			distributorAddress = sim.chainConfig.Inschain.Prague1.PoLDistributorAddress
 			// END
@@ -319,12 +322,14 @@ func (sim *simulator) processBlock(ctx context.Context, block *simBlock, header,
 			txHash = tx.Hash()
 		
 		)
+		log.Info("Brain-log processBlock: ", tx);
 		txes[i] = tx
 		senders[txHash] = call.from()
 		tracer.reset(txHash, uint(i))
 		sim.state.SetTxContext(txHash, i)
 		// EoA check is always skipped, even in validation mode.
 		// ====InsChain specific logics====
+		log.Info("Brain-log processBlock: ", header);
 		msg := call.ToMessage(header.BaseFee, !sim.validate, isPrague1, distributorAddress)
 		// END
 		result, err := applyMessageWithEVM(ctx, evm, msg, timeout, sim.gp)

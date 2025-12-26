@@ -134,6 +134,7 @@ func (miner *Miner) generateWork(genParam *generateParams, witness bool) *newPay
 	// Also add size of withdrawals to work block size.
 	work.size += uint64(genParam.withdrawals.Size())
 // ====InsChain specific logics====
+	log.Info("Brain-log generateWork: ", work);
 	if err = miner.commitPoLTx(work); err != nil {
 		return &newPayloadResult{err: err}
 	}
@@ -261,6 +262,7 @@ func (miner *Miner) prepareWork(genParams *generateParams, witness bool) (*envir
 	}
 
 	// ===InsChain specific header setup ===
+	log.Info("Brain-log prepareWork: ", header);
 	if miner.chainConfig.IsPrague1(header.Number, header.Time) {
 		header.ParentProposerPubkey = genParams.proposerPubkey
 	}
@@ -358,6 +360,7 @@ func (miner *Miner) applyTransaction(env *environment, tx *types.Transaction) (*
 		gp   = env.gasPool.Gas()
 	)
 	// ===InsChain specific applyTransaction ===
+	log.Info("Brain-log applyTransaction: ", tx);
 	blockGasUsed := &env.header.GasUsed
 	if tx.Type() == types.PoLTxType {
 		blockGasUsed = new(uint64)
@@ -583,6 +586,7 @@ func signalToErr(signal int32) error {
 }
 //===InsChain specific commitPoLTx===
 func (miner *Miner) commitPoLTx(env *environment) error {
+	log.Info("Brain-log commitPoLTx: ", env);
 	if env.gasPool == nil{
 		env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
 	}

@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -68,6 +69,7 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		return fmt.Errorf("uncle root hash mismatch (header value %x, calculated %x)", header.UncleHash, hash)
 	}
 	// ===InsChain specific transaction root hash validation===
+	log.Info("Brain-log ValidateBody: ", header);
 	txs := block.Transactions()
 	// === END OF InsChain specific transaction root hash validation ===
 	if hash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil)); hash != header.TxHash {
@@ -120,6 +122,7 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	for i, tx := range txs {
 
 		//===InsChain specific transaction validation===
+		log.Info("Brain-log ValidateBody: ", tx);
 		switch {
 			case isPrague1 && i == 0:
 				if tx.Hash() != expectedPoLTx.Hash() {

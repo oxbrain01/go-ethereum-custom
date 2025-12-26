@@ -726,6 +726,7 @@ func applyMessage(ctx context.Context, b Backend, args TransactionArgs, state *s
 		return nil, err
 	}
 	// ====InsChain specific logics LOG: MESSAGE====
+	log.Info("Brain-log applyMessage: ", header);
 	msg := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
 	// END
 	// Lower the basefee to 0 to avoid breaking EVM
@@ -879,6 +880,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 		return 0, err
 	}
 	// ====InsChain specific logics====
+	log.Info("Brain-log DoEstimateGas: ", header);
 	call := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
 	// END
 	// Run the gas estimation and wrap any revertals into a custom return
@@ -1323,6 +1325,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		// Set the accesslist to the last al
 		args.AccessList = &accessList
 		// ====InsChain specific logics====
+		log.Info("Brain-log DoCall: ", header);
 		msg := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
 		// END
 		// Apply the transaction with the access list tracer
@@ -1341,6 +1344,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		res, err := core.ApplyMessage(evm, msg, new(core.GasPool).AddGas(msg.GasLimit))
 		if err != nil {
 			// ====InsChain specific logics====
+			log.Info("Brain-log ApplyMessage: ", err);
 			return nil, 0, nil, fmt.Errorf("failed to apply transaction: %v err: %v", args.ToTransaction(types.LegacyTxType, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress).Hash(), err)
 		}
 		if tracer.Equal(prevTracer) {
@@ -1615,11 +1619,12 @@ func (api *TransactionAPI) SendTransaction(ctx context.Context, args Transaction
 	header := api.b.CurrentHeader()
 	tx := args.ToTransaction(types.DynamicFeeTxType,
 	// ====InsChain specific logics====
+	
 	api.b.ChainConfig().IsPrague1(header.Number, header.Time),
 	api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress,
 	// END
 	)
-
+log.Info("Brain-log FillTransaction: ", header)
 	signed, err := wallet.SignTx(account, tx, api.b.ChainConfig().ChainID)
 	if err != nil {
 		return common.Hash{}, err
@@ -1642,6 +1647,7 @@ func (api *TransactionAPI) FillTransaction(ctx context.Context, args Transaction
 	// Assemble the transaction and obtain rlp
 	// ====InsChain specific logics====
 	header := api.b.CurrentHeader()
+	log.Info("Brain-log FillTransaction: ", header)
 	tx := args.ToTransaction(types.DynamicFeeTxType, 
 		api.b.ChainConfig().IsPrague1(header.Number, header.Time), 
 		api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
@@ -1843,6 +1849,7 @@ func (api *TransactionAPI) SignTransaction(ctx context.Context, args Transaction
 	// Before actually sign the transaction, ensure the transaction fee is reasonable.
 	// ====InsChain specific logics====
 	header := api.b.CurrentHeader()
+	log.Info("Brain-log SignTransaction: ", header)
 	tx := args.ToTransaction(types.DynamicFeeTxType, 
 		api.b.ChainConfig().IsPrague1(header.Number, header.Time), 
 		api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
@@ -1904,6 +1911,7 @@ func (api *TransactionAPI) Resend(ctx context.Context, sendArgs TransactionArgs,
 	}
 	// ====InsChain specific logics====
 	header := api.b.CurrentHeader()
+	log.Info("Brain-log Resend: ", header)
 	matchTx := sendArgs.ToTransaction(types.DynamicFeeTxType, 
 		api.b.ChainConfig().IsPrague1(header.Number, header.Time), 
 		api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
@@ -1938,6 +1946,7 @@ func (api *TransactionAPI) Resend(ctx context.Context, sendArgs TransactionArgs,
 				sendArgs.Gas = gasLimit
 			}
 			// ====InsChain specific logics====
+			log.Info("Brain-log Resend: ", header)
 			signedTx, err := api.sign(sendArgs.from(), sendArgs.ToTransaction(types.DynamicFeeTxType, 
 				api.b.ChainConfig().IsPrague1(header.Number, header.Time), 
 				api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress))
