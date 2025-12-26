@@ -325,6 +325,13 @@ func (p *TxPool) Add(txs []*types.Transaction, sync bool) []error {
 		// Mark this transaction belonging to no-subpool
 		splits[i] = -1
 
+		// ====InsChain specific logics====
+		if tx.Type() == types.PoLTxType {
+			
+			continue
+		}
+		// END
+
 		// Try to find a subpool that accepts the transaction
 		for j, subpool := range p.subpools {
 			if subpool.Filter(tx) {

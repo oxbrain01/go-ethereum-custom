@@ -985,8 +985,10 @@ func (api *API) TraceCall(ctx context.Context, args ethapi.TransactionArgs, bloc
 		return nil, err
 	}
 	var (
-		msg         = args.ToMessage(blockContext.BaseFee, true)
-		tx          = args.ToTransaction(types.DynamicFeeTxType)
+		// ====InsChain specific logics====
+		msg         = args.ToMessage(blockContext.BaseFee, true, api.backend.ChainConfig().IsPrague1(block.Number(), block.Time()), api.backend.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
+		tx          = args.ToTransaction(types.DynamicFeeTxType, api.backend.ChainConfig().IsPrague1(block.Number(), block.Time()), api.backend.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
+		// END
 		traceConfig *TraceConfig
 	)
 	// Lower the basefee to 0 to avoid breaking EVM

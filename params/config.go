@@ -32,6 +32,10 @@ var (
 	HoleskyGenesisHash = common.HexToHash("0xb5f7f912443c940f21fd611f12828d75b534364ed9e95ca4e307729a4661bde4")
 	SepoliaGenesisHash = common.HexToHash("0x25a5cc106eea7138acab33231d7160d69cb777ee0c2c553fcddf5138993e6dd9")
 	HoodiGenesisHash   = common.HexToHash("0xbbe312868b376a3001692a646dd2d7d1e4406380dfd86b98aa8a34d1557c971b")
+
+	// ====InsChain specific genesis hashes====
+	InsChainGenesisHash = common.HexToHash("0xd57819422128da1c44339fc7956662378c17e2213e669b427ac91cd11dfcfb38")
+	// ====END OF InsChain specific genesis hashes====
 )
 
 func newUint64(val uint64) *uint64 { return &val }
@@ -364,6 +368,62 @@ var (
 		Clique:                  nil,
 	}
 	TestRules = TestChainConfig.Rules(new(big.Int), false, 0)
+
+	// ===InsChain specific chain configs ===
+	InsChainChainConfig = &ChainConfig{
+		ChainID:                 big.NewInt(1995),
+		HomesteadBlock:          big.NewInt(0),
+		DAOForkBlock:            big.NewInt(0),
+		DAOForkSupport:          true,
+		EIP150Block:             big.NewInt(0),
+		EIP155Block:             big.NewInt(0),
+		EIP158Block:             big.NewInt(0),
+		ByzantiumBlock:          big.NewInt(0),
+		ConstantinopleBlock:     big.NewInt(0),
+		PetersburgBlock:         big.NewInt(0),
+		IstanbulBlock:           big.NewInt(0),
+		MuirGlacierBlock:        big.NewInt(0),
+		BerlinBlock:             big.NewInt(0),
+		LondonBlock:             big.NewInt(0),
+		ArrowGlacierBlock:       big.NewInt(0),
+		GrayGlacierBlock:        big.NewInt(0),
+		TerminalTotalDifficulty: big.NewInt(0),
+		MergeNetsplitBlock:      big.NewInt(0),
+		ShanghaiTime:            newUint64(0),
+		CancunTime:              newUint64(0),
+		PragueTime:              newUint64(0),
+		DepositContractAddress:  InsChainDepositContractAddress,
+		Ethash:                  new(EthashConfig),
+		BlobScheduleConfig: &BlobScheduleConfig{
+			Cancun: DefaultCancunBlobConfig,
+			Prague: DefaultPragueBlobConfig,
+		},
+		Inschain: InschainConfig{
+			Prague1: Prague1Config{
+				Time: newUint64(0),
+				BaseFeeChangeDenominator: InsChainBaseFeeChangeDenominator,
+				MinimumBaseFeeWei: big.NewInt(1 * GWei),
+				PoLDistributorAddress: PoLDistributorAddress,
+			},
+			Prague2: Prague2Config{
+				Time: newUint64(0),
+				MinimumBaseFeeWei: big.NewInt(0),
+			},
+			Prague3: Prague3Config{
+				Time: newUint64(0),
+				InsExVaultAddress: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+				BlockedAddresses: []common.Address{
+					common.HexToAddress("0x0000000000000000000000000000000000000000"),
+					common.HexToAddress("0x0000000000000000000000000000000000000000"),
+					common.HexToAddress("0x0000000000000000000000000000000000000000"),
+				},
+				RescueAddress: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+			},
+			Prague4: Prague4Config{
+				Time: newUint64(0),
+			},
+		},
+	}
 )
 
 var (
@@ -415,6 +475,14 @@ var (
 		Prague: DefaultPragueBlobConfig,
 		Osaka:  DefaultOsakaBlobConfig,
 	}
+	// ===InsChain specific blob schedules====
+	// DefaultInsChainBlobSchedule is the latest configured blob schedule for InsChain.
+	DefaultInsChainPragueBlobConfig = &BlobConfig{
+		Target:         3,
+		Max:            6,
+		UpdateFraction: 3338477,
+	}
+	// ===END OF InsChain specific blob schedules====
 )
 
 // NetworkNames are user friendly names to use in the chain spec banner.
@@ -423,6 +491,10 @@ var NetworkNames = map[string]string{
 	SepoliaChainConfig.ChainID.String(): "sepolia",
 	HoleskyChainConfig.ChainID.String(): "holesky",
 	HoodiChainConfig.ChainID.String():   "hoodi",
+
+	// ===InsChain specific network names ===
+	InsChainChainConfig.ChainID.String(): "inschain",
+	// ===END OF InsChain specific network names ===
 }
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -491,7 +563,49 @@ type ChainConfig struct {
 	Ethash             *EthashConfig       `json:"ethash,omitempty"`
 	Clique             *CliqueConfig       `json:"clique,omitempty"`
 	BlobScheduleConfig *BlobScheduleConfig `json:"blobSchedule,omitempty"`
+
+	// ===InsChain specific chain configs ===
+	Inschain InschainConfig `json:"inschain,omitempty"`
 }
+// ===InsChain specific chain configs ===
+type InschainConfig struct {
+	// Prague 1
+	Prague1 Prague1Config `json:"prague1,omitempty"`
+	// Prague 2
+	Prague2 Prague2Config `json:"prague2,omitempty"`
+	// Prague 3
+	Prague3 Prague3Config `json:"prague3,omitempty"`
+	// Prague 4
+	Prague4 Prague4Config `json:"prague4,omitempty"`
+}
+
+// === Prague 1 config ===
+type Prague1Config struct {
+	Time *uint64 `json:"time,omitempty"`
+	BaseFeeChangeDenominator uint64 `json:"baseFeeChangeDenominator,omitempty"`
+	MinimumBaseFeeWei *big.Int `json:"minimumBaseFeeWei,omitempty"`
+	PoLDistributorAddress common.Address `json:"polDistributorAddress,omitempty"`
+}
+
+// === Prague 2 config ===
+type Prague2Config struct {
+	Time *uint64 `json:"time,omitempty"`
+	MinimumBaseFeeWei *big.Int `json:"minimumBaseFeeWei,omitempty"`
+}
+
+// === Prague 3 config ===
+type Prague3Config struct {
+	Time *uint64 `json:"time,omitempty"`
+	InsExVaultAddress common.Address `json:"insExVaultAddress,omitempty"`
+	BlockedAddresses []common.Address `json:"blockedAddresses,omitempty"`
+	RescueAddress common.Address `json:"rescueAddress,omitempty"`
+}
+
+// === Prague 4 config ===
+type Prague4Config struct {
+	Time *uint64 `json:"time,omitempty"`
+}
+// === END OF INSCHAIN specific chain configs ===
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
 type EthashConfig struct{}
@@ -693,6 +807,21 @@ func (c *ChainConfig) Description() string {
 	if c.VerkleTime != nil {
 		banner += fmt.Sprintf(" - Verkle:                      @%-10v blob: (%s)\n", *c.VerkleTime, c.BlobScheduleConfig.Verkle)
 	}
+
+	// ===InsChain specific banner ===
+	if c.Inschain.Prague1.Time != nil {
+		banner += fmt.Sprintf(" - Prague 1:                    @%-10v\n", c.Inschain.Prague1)
+	}
+	if c.Inschain.Prague2.Time != nil {
+		banner += fmt.Sprintf(" - Prague 2:                    @%-10v\n", c.Inschain.Prague2)
+	}
+	if c.Inschain.Prague3.Time != nil {
+		banner += fmt.Sprintf(" - Prague 3:                    @%-10v\n", c.Inschain.Prague3)
+	}
+	if c.Inschain.Prague4.Time != nil {
+		banner += fmt.Sprintf(" - Prague 4:                    @%-10v\n", c.Inschain.Prague4)
+	}
+	// ===END OF InsChain specific banner ===
 	banner += fmt.Sprintf("\nAll fork specifications can be found at https://ethereum.github.io/execution-specs/src/ethereum/forks/\n")
 	return banner
 }
@@ -871,6 +1000,29 @@ func (c *ChainConfig) IsVerkle(num *big.Int, time uint64) bool {
 	return c.IsLondon(num) && isTimestampForked(c.VerkleTime, time)
 }
 
+// ===InsChain specific fork checks ===
+// IsPrague1 returns whether time is either equal to the Prague 1 fork time or greater.
+func (c *ChainConfig) IsPrague1(num *big.Int, time uint64) bool {
+	return c.IsPrague(num, time) && isTimestampForked(c.Inschain.Prague1.Time, time)
+}
+
+// IsPrague2 returns whether time is either equal to the Prague 2 fork time or greater.
+func (c *ChainConfig) IsPrague2(num *big.Int, time uint64) bool {
+	return c.IsPrague(num, time) && isTimestampForked(c.Inschain.Prague2.Time, time)
+}
+
+// IsPrague3 returns whether time is either equal to the Prague 3 fork time or greater.
+func (c *ChainConfig) IsPrague3(num *big.Int, time uint64) bool {
+	return c.IsPrague(num, time) && isTimestampForked(c.Inschain.Prague3.Time, time)
+}
+
+// IsPrague4 returns whether time is either equal to the Prague 4 fork time or greater.
+func (c *ChainConfig) IsPrague4(num *big.Int, time uint64) bool {
+	return c.IsPrague(num, time) && isTimestampForked(c.Inschain.Prague4.Time, time)
+}
+
+// === END OF InsChain specific fork checks ===
+
 // IsVerkleGenesis checks whether the verkle fork is activated at the genesis block.
 //
 // Verkle mode is considered enabled if the verkle fork time is configured,
@@ -952,6 +1104,12 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "bpo4", timestamp: c.BPO4Time, optional: true},
 		{name: "bpo5", timestamp: c.BPO5Time, optional: true},
 		{name: "amsterdam", timestamp: c.AmsterdamTime, optional: true},
+		// ===InsChain specific fork checks ===
+		{name: "prague1", timestamp: c.Inschain.Prague1.Time, optional: true},
+		{name: "prague2", timestamp: c.Inschain.Prague2.Time, optional: true},
+		{name: "prague3", timestamp: c.Inschain.Prague3.Time, optional: true},
+		{name: "prague4", timestamp: c.Inschain.Prague4.Time, optional: true},
+		// === END OF InsChain specific fork checks ===
 	} {
 		if lastFork.name != "" {
 			switch {
@@ -1020,6 +1178,34 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 			}
 		}
 	}
+
+	// ===InsChain specific blob schedule checks ===
+	if c.Inschain.Prague1.Time != nil {
+		if c.Inschain.Prague1.PoLDistributorAddress == (common.Address{}) {
+			return fmt.Errorf("invalid chain configuration: missing PoL distributor address for Prague 1")
+		}
+		if c.Inschain.Prague1.BaseFeeChangeDenominator == 0 {
+			return fmt.Errorf("invalid chain configuration: baseFeeChangeDenominator for Prague 1 must be >0")
+		}
+	}
+	
+	if c.Inschain.Prague3.Time != nil {
+		if c.Inschain.Prague3.InsExVaultAddress == (common.Address{}) {	
+			return fmt.Errorf("invalid chain configuration: missing InsEx vault address for Prague 3")
+		}
+
+		for _, blockedAddress := range c.Inschain.Prague3.BlockedAddresses {
+			if blockedAddress == (common.Address{}) {
+				return fmt.Errorf("invalid chain configuration: missing blocked address for Prague 3")
+			}
+		}
+
+		if c.Inschain.Prague3.RescueAddress == (common.Address{}) {
+			return fmt.Errorf("invalid chain configuration: missing rescue address for Prague 3")
+		}
+	}
+	
+	// === END OF InsChain specific blob schedule checks ===
 	return nil
 }
 
@@ -1125,14 +1311,57 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, headNumber *big.Int, 
 	if isForkTimestampIncompatible(c.AmsterdamTime, newcfg.AmsterdamTime, headTimestamp) {
 		return newTimestampCompatError("Amsterdam fork timestamp", c.AmsterdamTime, newcfg.AmsterdamTime)
 	}
+
+	// ===InsChain specific fork checks ===
+	if isForkTimestampIncompatible(c.Inschain.Prague1.Time, newcfg.Inschain.Prague1.Time, headTimestamp) {
+		return newTimestampCompatError("Prague 1 fork timestamp", c.Inschain.Prague1.Time, newcfg.Inschain.Prague1.Time)
+	}
+	if isForkTimestampIncompatible(c.Inschain.Prague2.Time, newcfg.Inschain.Prague2.Time, headTimestamp) {
+		return newTimestampCompatError("Prague 2 fork timestamp", c.Inschain.Prague2.Time, newcfg.Inschain.Prague2.Time)
+	}
+	if isForkTimestampIncompatible(c.Inschain.Prague3.Time, newcfg.Inschain.Prague3.Time, headTimestamp) {
+		return newTimestampCompatError("Prague 3 fork timestamp", c.Inschain.Prague3.Time, newcfg.Inschain.Prague3.Time)
+	}
+	if isForkTimestampIncompatible(c.Inschain.Prague4.Time, newcfg.Inschain.Prague4.Time, headTimestamp) {
+		return newTimestampCompatError("Prague 4 fork timestamp", c.Inschain.Prague4.Time, newcfg.Inschain.Prague4.Time)
+	}
+	// === END OF InsChain specific fork checks ===
 	return nil
 }
 
 // BaseFeeChangeDenominator bounds the amount the base fee can change between blocks.
-func (c *ChainConfig) BaseFeeChangeDenominator() uint64 {
+// func (c *ChainConfig) BaseFeeChangeDenominator() uint64 {
+// 	return DefaultBaseFeeChangeDenominator
+// }
+// ===InsChain specific BaseFeeChangeDenominator===
+func (c *ChainConfig) BaseFeeChangeDenominator(num *big.Int, time uint64) uint64 {
+	if c.IsPrague1(num, time) {
+		return c.Inschain.Prague1.BaseFeeChangeDenominator
+	}
+	if c.IsPrague2(num, time) {
+		return DefaultBaseFeeChangeDenominator
+	}
+	if c.IsPrague3(num, time) {
+		return InsChainBaseFeeChangeDenominator
+	}
+	if c.IsPrague4(num, time) {
+		return DefaultBaseFeeChangeDenominator
+	}
 	return DefaultBaseFeeChangeDenominator
 }
 
+func(c *ChainConfig) MinBaseFee(num *big.Int, time uint64) *big.Int {
+	if c.IsPrague1(num, time) {
+		return c.Inschain.Prague1.MinimumBaseFeeWei
+	}
+	if c.IsPrague2(num, time) {
+		return c.Inschain.Prague1.MinimumBaseFeeWei
+	}
+
+	return common.Big0
+}
+
+// ===END OF InsChain specific BaseFeeChangeDenominator===
 // ElasticityMultiplier bounds the maximum gas limit an EIP-1559 block may have.
 func (c *ChainConfig) ElasticityMultiplier() uint64 {
 	return DefaultElasticityMultiplier
@@ -1164,6 +1393,16 @@ func (c *ChainConfig) LatestFork(time uint64) forks.Fork {
 		return forks.Cancun
 	case c.IsShanghai(london, time):
 		return forks.Shanghai
+	// ===InsChain specific fork checks ===
+	case c.IsPrague1(london, time):
+		return forks.Prague1
+	case c.IsPrague2(london, time):
+		return forks.Prague2
+	case c.IsPrague3(london, time):
+		return forks.Prague3
+	case c.IsPrague4(london, time):
+		return forks.Prague4
+	// === END OF InsChain specific fork checks ===
 	default:
 		return forks.Paris
 	}
@@ -1188,6 +1427,10 @@ func (c *ChainConfig) BlobConfig(fork forks.Fork) *BlobConfig {
 		return c.BlobScheduleConfig.Prague
 	case forks.Cancun:
 		return c.BlobScheduleConfig.Cancun
+	// ===InsChain specific blob schedule checks ===
+	case forks.Prague1, forks.Prague2:
+		return c.BlobScheduleConfig.Prague
+	// === END OF InsChain specific blob schedule checks ===
 	default:
 		return nil
 	}

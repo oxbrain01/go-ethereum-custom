@@ -67,6 +67,9 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if hash := types.CalcUncleHash(block.Uncles()); hash != header.UncleHash {
 		return fmt.Errorf("uncle root hash mismatch (header value %x, calculated %x)", header.UncleHash, hash)
 	}
+	// ===InsChain specific transaction root hash validation===
+	txs := block.Transactions()
+	// === END OF InsChain specific transaction root hash validation ===
 	if hash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil)); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch (header value %x, calculated %x)", header.TxHash, hash)
 	}
@@ -85,9 +88,53 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		return errors.New("withdrawals present in block body")
 	}
 
+	// === InsChain specific block body validation ===
+	isPrague1 := v.config.IsPrague1(block.Number(), block.Time())
+	var expectedPoLTx *types.Transaction
+	if isPrague1  {
+		if block.ProposerPubkey() == nil {
+			return errors.New("proposer pubkey is nil")
+		}
+		polTx, err := types.NewPoLTx(
+			v.config.ChainID,	
+			v.config.Inschain.Prague1.PoLDistributorAddress,
+			block.Number(),
+			params.PoLTxGasLimit,
+			block.BaseFee(),
+			block.ProposerPubkey(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create expected PoLTx: %w", err)
+		}
+		expectedPoLTx = polTx
+		// Validate the PoLTx
+		if len(txs) == 0{
+			return errors.New("expected PoLTx in block body")
+		}
+		
+	}
+	// === END OF InsChain specific block body validation ===
+
 	// Blob transactions may be present after the Cancun fork.
 	var blobs int
-	for i, tx := range block.Transactions() {
+	for i, tx := range txs {
+
+		//===InsChain specific transaction validation===
+		switch {
+			case isPrague1 && i == 0:
+				if tx.Hash() != expectedPoLTx.Hash() {
+
+					return fmt.Errorf("expected PoLTx hash mismatch (header value %x, calculated %x)", expectedPoLTx.Hash(), tx.Hash())
+				}
+			case tx.Type() == types.PoLTxType:
+				return errors.New("invalid PoLTx in block body")
+			default:
+				if tx.Type() == types.PoLTxType {
+					return errors.New("unexpected PoLTx in block body")
+				}
+		}
+
+
 		// Count the number of blobs to validate against the header's blobGasUsed
 		blobs += len(tx.BlobHashes())
 

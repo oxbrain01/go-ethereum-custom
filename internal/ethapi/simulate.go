@@ -199,6 +199,38 @@ func (sim *simulator) execute(ctx context.Context, blocks []simBlock) ([]*simBlo
 		if err != nil {
 			return nil, err
 		}
+
+		// ====InsChain specific logics====
+		isPrague1 := sim.chainConfig.IsPrague1(result.Number(), result.Time())
+		var expectedPoLHash common.Hash
+		if isPrague1 {
+			polTx, err := types.NewPoLTx(
+				sim.chainConfig.ChainID,
+				sim.chainConfig.Inschain.Prague1.PoLDistributorAddress,
+				result.Number(),
+				params.PoLTxGasLimit,
+				result.BaseFee(),
+				result.ProposerPubkey(),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create expected PoLTx: %w", err)
+			}
+			expectedPoLHash = polTx.Hash()
+		}
+
+		for i, tx := range result.Transactions() {
+			switch {
+			case isPrague1 && i == 0 :
+				if tx.Hash() != expectedPoLHash {
+					return nil, fmt.Errorf("expected PoLTx hash mismatch (header value %x, calculated %x)", expectedPoLHash, tx.Hash())
+				}
+			case tx.Type() == types.PoLTxType:
+				return nil, fmt.Errorf("invalid block: tx at index %d is a PoLTx", i)
+			}
+		}
+		// END
+
+
 		headers[bi] = result.Header()
 		results[bi] = &simBlockResult{fullTx: sim.fullTx, chainConfig: sim.chainConfig, Block: result, Calls: callResults, senders: senders}
 		parent = result.Header()
@@ -279,15 +311,22 @@ func (sim *simulator) processBlock(ctx context.Context, block *simBlock, header,
 			return nil, nil, nil, err
 		}
 		var (
-			tx     = call.ToTransaction(types.DynamicFeeTxType)
+			// ====InsChain specific logics====
+			isPrague1 = sim.chainConfig.IsPrague1(header.Number, header.Time)
+			distributorAddress = sim.chainConfig.Inschain.Prague1.PoLDistributorAddress
+			// END
+			tx     = call.ToTransaction(types.DynamicFeeTxType, isPrague1, distributorAddress)
 			txHash = tx.Hash()
+		
 		)
 		txes[i] = tx
 		senders[txHash] = call.from()
 		tracer.reset(txHash, uint(i))
 		sim.state.SetTxContext(txHash, i)
 		// EoA check is always skipped, even in validation mode.
-		msg := call.ToMessage(header.BaseFee, !sim.validate)
+		// ====InsChain specific logics====
+		msg := call.ToMessage(header.BaseFee, !sim.validate, isPrague1, distributorAddress)
+		// END
 		result, err := applyMessageWithEVM(ctx, evm, msg, timeout, sim.gp)
 		if err != nil {
 			txErr := txValidationError(err)

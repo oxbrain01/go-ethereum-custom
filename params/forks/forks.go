@@ -46,6 +46,12 @@ const (
 	BPO4
 	BPO5
 	Amsterdam
+	// ===InsChain specific forks ===
+	Prague1
+	Prague2
+	Prague3
+	Prague4
+	// === END OF InsChain specific forks ===
 )
 
 // String implements fmt.Stringer.

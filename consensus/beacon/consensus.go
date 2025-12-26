@@ -272,6 +272,19 @@ func (beacon *Beacon) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 			return err
 		}
 	}
+	// ===InsChain specific header verification
+	prague1 := chain.Config().IsPrague1(header.Number, header.Time)
+	if !prague1 {
+		if header.ParentProposerPubkey == nil {
+			return fmt.Errorf("header is missing parentProposerPubkey")
+		}
+	}else{
+		if header.ParentProposerPubkey == nil {
+			return errors.New("header has parentProposerPubkey set")
+		}
+	}
+
+	// === END OF InsChain specific header verification ===
 	return nil
 }
 

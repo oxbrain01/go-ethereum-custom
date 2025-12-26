@@ -443,7 +443,9 @@ func (args *TransactionArgs) CallDefaults(globalGasCap uint64, baseFee *big.Int,
 // core evm. This method is used in calls and traces that do not require a real
 // live transaction.
 // Assumes that fields are not nil, i.e. setDefaults or CallDefaults has been called.
-func (args *TransactionArgs) ToMessage(baseFee *big.Int, skipNonceCheck bool) *core.Message {
+// ====InsChain specific logics====
+func (args *TransactionArgs) ToMessage(baseFee *big.Int, skipNonceCheck bool, isPrague1 bool, distributorAddress common.Address) *core.Message {
+	// END
 	var (
 		gasPrice  *big.Int
 		gasFeeCap *big.Int
@@ -497,7 +499,9 @@ func (args *TransactionArgs) ToMessage(baseFee *big.Int, skipNonceCheck bool) *c
 
 // ToTransaction converts the arguments to a transaction.
 // This assumes that setDefaults has been called.
-func (args *TransactionArgs) ToTransaction(defaultType int) *types.Transaction {
+// ====InsChain specific logics====
+func (args *TransactionArgs) ToTransaction(defaultType int, isPrague1 bool, distributorAddress common.Address) *types.Transaction {
+	// END
 	usedType := types.LegacyTxType
 	switch {
 	case args.AuthorizationList != nil || defaultType == types.SetCodeTxType:

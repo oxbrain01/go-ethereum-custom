@@ -53,14 +53,21 @@ type Config struct {
 
 // DefaultConfig contains default settings for miner.
 var DefaultConfig = Config{
-	GasCeil:  60_000_000,
-	GasPrice: big.NewInt(params.GWei / 1000),
+	// GasCeil:  60_000_000,
+	// GasPrice: big.NewInt(params.GWei / 1000),
 
-	// The default recommit time is chosen as two seconds since
-	// consensus-layer usually will wait a half slot of time(6s)
-	// for payload generation. It should be enough for Geth to
-	// run 3 rounds.
-	Recommit: 2 * time.Second,
+	// // The default recommit time is chosen as two seconds since
+	// // consensus-layer usually will wait a half slot of time(6s)
+	// // for payload generation. It should be enough for Geth to
+	// // run 3 rounds.
+	// Recommit: 2 * time.Second,
+
+	// ===InsChain specific default config ===
+	GasCeil:  36_000_000,
+	GasPrice: big.NewInt(1),
+	Recommit: 1 * time.Second,
+	// === END OF InsChain specific default config ===
+
 }
 
 // Miner is the main object which takes care of submitting new work to consensus

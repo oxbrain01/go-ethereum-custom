@@ -17,6 +17,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -28,6 +29,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+)
+
+// ===InsChain specific constants ===
+var (
+	transferSig = common.HexToHash("ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
+	internalBalanceChangeSig = common.HexToHash("649bbc62d0e31342afea4e5cd82d4049e7e1ee912fc0889aa790803be39038c5")
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -155,6 +162,20 @@ func ApplyTransactionWithEVM(msg *Message, gp *GasPool, statedb *state.StateDB, 
 	if err != nil {
 		return nil, err
 	}
+
+	// ===InsChain specific transaction execution===
+
+	blockGasUsed := *usedGas + result.UsedGas
+	receipt = MakeReceipt(evm, result, statedb, blockNumber, blockHash, blockTime, tx, blockGasUsed, nil)
+
+	if !evm.ChainConfig().IsPrague4(blockNumber, blockTime) && evm.ChainConfig().IsPrague3(blockNumber, blockTime) {
+		if err := ValidatePrague3Transaction(&evm.ChainConfig().Inschain.Prague3, receipt); err != nil {
+			return nil, err
+		}
+	}
+
+	// === END OF InsChain specific transaction execution ===
+
 	// Update the state with pending changes.
 	var root []byte
 	if evm.ChainConfig().IsByzantium(blockNumber) {
@@ -344,3 +365,32 @@ func onSystemCallStart(tracer *tracing.Hooks, ctx *tracing.VMContext) {
 		tracer.OnSystemCallStart()
 	}
 }
+
+// ===InsChain specific transaction validation ===	
+func ValidatePrague3Transaction(cfg *params.Prague3Config, receipt *types.Receipt) error {
+	for _, log := range receipt.Logs {
+		// check ERC20 transfer logs
+		if len(log.Topics) >= 3 && log.Topics[0] == transferSig {
+			
+			fromAddress := common.BytesToAddress(log.Topics[1].Bytes())
+			toAddress := common.BytesToAddress(log.Topics[2].Bytes())
+
+			if fromAddress == cfg.InsExVaultAddress || toAddress == cfg.InsExVaultAddress {
+				return errors.New("Transaction contains ERC20 transfer to or from InsEx vault")
+			}
+
+			for _, blockedAddress := range cfg.BlockedAddresses {
+				if (fromAddress == blockedAddress && toAddress != cfg.RescueAddress) || (toAddress == blockedAddress && fromAddress != cfg.RescueAddress) {
+					return errors.New("Transaction contains ERC20 transfer to or from blocked address")
+				}
+			}
+		}
+
+		if log.Address == cfg.InsExVaultAddress && len(log.Topics) > 0 && log.Topics[0] == internalBalanceChangeSig {
+			return errors.New("Transaction contains internal balance change")
+		}
+
+	}
+	return nil
+}
+// === END OF InsChain specific transaction validation ===

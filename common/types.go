@@ -39,6 +39,8 @@ const (
 	HashLength = 32
 	// AddressLength is the expected length of the address
 	AddressLength = 20
+	// ===InsChain specific lengths ===
+	PubkeyLength = 48
 )
 
 var (
@@ -495,3 +497,17 @@ func (b PrettyBytes) TerminalString() string {
 	}
 	return fmt.Sprintf("%#x...%x (%dB)", b[:3], b[len(b)-3:], len(b))
 }
+
+
+
+// === InsChain specific types ===
+
+// Pubkey represents a fixed-length 48-byte BLS public key.
+// JSON and text serialization use 0x-prefixed hex strings.
+type Pubkey [PubkeyLength]byte
+
+// Bytes returns a copy of the underlying byte slice.
+func (p Pubkey) Bytes() []byte { return p[:] }
+
+// String returns the hex-encoded string representation of the pubkey.
+func (p Pubkey) String() string { return hexutil.Encode(p[:]) }

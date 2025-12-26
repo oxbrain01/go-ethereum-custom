@@ -50,6 +50,10 @@ var (
 	// ExecutionPayloadV3 has the syntax of ExecutionPayloadV2 and appends the new
 	// fields: blobGasUsed and excessBlobGas.
 	PayloadV3 PayloadVersion = 0x3
+
+	// ====InsChain specific PayloadVersion====
+	PayloadV3P11 PayloadVersion = 0x31
+	// ====END OF InsChain specific PayloadVersion====
 )
 
 //go:generate go run github.com/fjl/gencodec -type PayloadAttributes -field-override payloadAttributesMarshaling -out gen_blockparams.go
@@ -62,6 +66,9 @@ type PayloadAttributes struct {
 	SuggestedFeeRecipient common.Address      `json:"suggestedFeeRecipient" gencodec:"required"`
 	Withdrawals           []*types.Withdrawal `json:"withdrawals"`
 	BeaconRoot            *common.Hash        `json:"parentBeaconBlockRoot"`
+	// ====InsChain specific PayloadAttributes====
+	ProposerPubkey *common.Pubkey // The proposer public key
+	// ====END OF InsChain specific PayloadAttributes====
 }
 
 // JSON type overrides for PayloadAttributes.

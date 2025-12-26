@@ -725,7 +725,9 @@ func applyMessage(ctx context.Context, b Backend, args TransactionArgs, state *s
 	if err := args.CallDefaults(gp.Gas(), blockContext.BaseFee, b.ChainConfig().ChainID); err != nil {
 		return nil, err
 	}
-	msg := args.ToMessage(header.BaseFee, true)
+	// ====InsChain specific logics LOG: MESSAGE====
+	msg := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
+	// END
 	// Lower the basefee to 0 to avoid breaking EVM
 	// invariants (basefee < feecap).
 	if msg.GasPrice.Sign() == 0 {
@@ -876,8 +878,9 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 	if err := args.CallDefaults(gasCap, header.BaseFee, b.ChainConfig().ChainID); err != nil {
 		return 0, err
 	}
-	call := args.ToMessage(header.BaseFee, true)
-
+	// ====InsChain specific logics====
+	call := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
+	// END
 	// Run the gas estimation and wrap any revertals into a custom return
 	estimate, revert, err := gasestimator.Estimate(ctx, call, opts, gasCap)
 	if err != nil {
@@ -1319,8 +1322,9 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		statedb := db.Copy()
 		// Set the accesslist to the last al
 		args.AccessList = &accessList
-		msg := args.ToMessage(header.BaseFee, true)
-
+		// ====InsChain specific logics====
+		msg := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
+		// END
 		// Apply the transaction with the access list tracer
 		tracer := logger.NewAccessListTracer(accessList, addressesToExclude)
 		config := vm.Config{Tracer: tracer.Hooks(), NoBaseFee: true}
@@ -1336,7 +1340,8 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		}
 		res, err := core.ApplyMessage(evm, msg, new(core.GasPool).AddGas(msg.GasLimit))
 		if err != nil {
-			return nil, 0, nil, fmt.Errorf("failed to apply transaction: %v err: %v", args.ToTransaction(types.LegacyTxType).Hash(), err)
+			// ====InsChain specific logics====
+			return nil, 0, nil, fmt.Errorf("failed to apply transaction: %v err: %v", args.ToTransaction(types.LegacyTxType, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress).Hash(), err)
 		}
 		if tracer.Equal(prevTracer) {
 			return accessList, res.UsedGas, res.Err, nil
@@ -1607,7 +1612,13 @@ func (api *TransactionAPI) SendTransaction(ctx context.Context, args Transaction
 		return common.Hash{}, err
 	}
 	// Assemble the transaction and sign with the wallet
-	tx := args.ToTransaction(types.DynamicFeeTxType)
+	header := api.b.CurrentHeader()
+	tx := args.ToTransaction(types.DynamicFeeTxType,
+	// ====InsChain specific logics====
+	api.b.ChainConfig().IsPrague1(header.Number, header.Time),
+	api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress,
+	// END
+	)
 
 	signed, err := wallet.SignTx(account, tx, api.b.ChainConfig().ChainID)
 	if err != nil {
@@ -1629,7 +1640,12 @@ func (api *TransactionAPI) FillTransaction(ctx context.Context, args Transaction
 		return nil, err
 	}
 	// Assemble the transaction and obtain rlp
-	tx := args.ToTransaction(types.DynamicFeeTxType)
+	// ====InsChain specific logics====
+	header := api.b.CurrentHeader()
+	tx := args.ToTransaction(types.DynamicFeeTxType, 
+		api.b.ChainConfig().IsPrague1(header.Number, header.Time), 
+		api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
+	// END
 	data, err := tx.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -1825,7 +1841,12 @@ func (api *TransactionAPI) SignTransaction(ctx context.Context, args Transaction
 		return nil, err
 	}
 	// Before actually sign the transaction, ensure the transaction fee is reasonable.
-	tx := args.ToTransaction(types.DynamicFeeTxType)
+	// ====InsChain specific logics====
+	header := api.b.CurrentHeader()
+	tx := args.ToTransaction(types.DynamicFeeTxType, 
+		api.b.ChainConfig().IsPrague1(header.Number, header.Time), 
+		api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
+	// END
 	if err := checkTxFee(tx.GasPrice(), tx.Gas(), api.b.RPCTxFeeCap()); err != nil {
 		return nil, err
 	}
@@ -1881,7 +1902,12 @@ func (api *TransactionAPI) Resend(ctx context.Context, sendArgs TransactionArgs,
 	if err := sendArgs.setDefaults(ctx, api.b, sidecarConfig{}); err != nil {
 		return common.Hash{}, err
 	}
-	matchTx := sendArgs.ToTransaction(types.DynamicFeeTxType)
+	// ====InsChain specific logics====
+	header := api.b.CurrentHeader()
+	matchTx := sendArgs.ToTransaction(types.DynamicFeeTxType, 
+		api.b.ChainConfig().IsPrague1(header.Number, header.Time), 
+		api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
+	// END
 
 	// Before replacing the old transaction, ensure the _new_ transaction fee is reasonable.
 	price := matchTx.GasPrice()
@@ -1911,7 +1937,11 @@ func (api *TransactionAPI) Resend(ctx context.Context, sendArgs TransactionArgs,
 			if gasLimit != nil && *gasLimit != 0 {
 				sendArgs.Gas = gasLimit
 			}
-			signedTx, err := api.sign(sendArgs.from(), sendArgs.ToTransaction(types.DynamicFeeTxType))
+			// ====InsChain specific logics====
+			signedTx, err := api.sign(sendArgs.from(), sendArgs.ToTransaction(types.DynamicFeeTxType, 
+				api.b.ChainConfig().IsPrague1(header.Number, header.Time), 
+				api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress))
+			// END
 			if err != nil {
 				return common.Hash{}, err
 			}

@@ -44,6 +44,9 @@ type BuildPayloadArgs struct {
 	Withdrawals  types.Withdrawals     // The provided withdrawals
 	BeaconRoot   *common.Hash          // The provided beaconRoot (Cancun)
 	Version      engine.PayloadVersion // Versioning byte for payload id calculation.
+	// ====InsChain specific BuildPayloadArgs====
+	ProposerPubkey *common.Pubkey // The proposer public key
+	// ====END OF InsChain specific BuildPayloadArgs====
 }
 
 // Id computes an 8-byte identifier by hashing the components of the payload arguments.

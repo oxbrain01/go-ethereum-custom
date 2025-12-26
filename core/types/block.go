@@ -106,6 +106,9 @@ type Header struct {
 
 	// RequestsHash was added by EIP-7685 and is ignored in legacy headers.
 	RequestsHash *common.Hash `json:"requestsHash" rlp:"optional"`
+
+	// ===InsChain specific header fields ===
+	ParentProposerPubkey *common.Pubkey `json:"parentProposerPubkey" rlp:"optional"`
 }
 
 // field type overrides for gencodec
@@ -329,6 +332,11 @@ func CopyHeader(h *Header) *Header {
 		cpy.RequestsHash = new(common.Hash)
 		*cpy.RequestsHash = *h.RequestsHash
 	}
+	// ===InsChain specific header fields ===
+	if h.ParentProposerPubkey != nil {
+		cpy.ParentProposerPubkey = new(common.Pubkey)
+		*cpy.ParentProposerPubkey = *h.ParentProposerPubkey
+	}
 	return &cpy
 }
 
@@ -410,7 +418,9 @@ func (b *Block) BaseFee() *big.Int {
 
 func (b *Block) BeaconRoot() *common.Hash   { return b.header.ParentBeaconRoot }
 func (b *Block) RequestsHash() *common.Hash { return b.header.RequestsHash }
-
+// ===InsChain specific header fields ===
+func (b *Block) ParentProposerPubkey() *common.Pubkey { return b.header.ParentProposerPubkey }
+// ===END OF InsChain specific header fields ===
 func (b *Block) ExcessBlobGas() *uint64 {
 	var excessBlobGas *uint64
 	if b.header.ExcessBlobGas != nil {

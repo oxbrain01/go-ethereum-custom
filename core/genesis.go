@@ -657,6 +657,20 @@ func DefaultHoodiGenesisBlock() *Genesis {
 	}
 }
 
+// ===InsChain specific genesis blocks ===
+// DefaultInsChainGenesisBlock returns the InsChain mainnet genesis block.
+func DefaultInsChainGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.InsChainChainConfig,
+		Nonce:      0x1234,
+		ExtraData:  []byte{},
+		GasLimit:   0x1c9c380,
+		Difficulty: big.NewInt(0x01),
+		Timestamp:  1742212800,
+		Alloc:      decodePrealloc(insAllocData), // REFACTOR: need add alloc data
+	}
+}
+
 // DeveloperGenesisBlock returns the 'geth --dev' genesis block.
 func DeveloperGenesisBlock(gasLimit uint64, faucet *common.Address) *Genesis {
 	// Override the default period to the user requested one

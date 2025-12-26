@@ -112,6 +112,9 @@ type generateParams struct {
 	withdrawals types.Withdrawals // List of withdrawals to include in block (shanghai field)
 	beaconRoot  *common.Hash      // The beacon root (cancun field).
 	noTxs       bool              // Flag whether an empty block without any transaction is expected
+	// ===InsChain specific generateParams ===
+	proposerPubkey *common.Pubkey // The proposer public key
+	// === END OF InsChain specific generateParams ===
 }
 
 // generateWork generates a sealing block based on the given parameters.
@@ -130,7 +133,11 @@ func (miner *Miner) generateWork(genParam *generateParams, witness bool) *newPay
 	}
 	// Also add size of withdrawals to work block size.
 	work.size += uint64(genParam.withdrawals.Size())
-
+// ====InsChain specific logics====
+	if err = miner.commitPoLTx(work); err != nil {
+		return &newPayloadResult{err: err}
+	}
+// END
 	if !genParam.noTxs {
 		interrupt := new(atomic.Int32)
 		timer := time.AfterFunc(miner.config.Recommit, func() {
@@ -252,6 +259,12 @@ func (miner *Miner) prepareWork(genParams *generateParams, witness bool) (*envir
 		header.ExcessBlobGas = &excessBlobGas
 		header.ParentBeaconRoot = genParams.beaconRoot
 	}
+
+	// ===InsChain specific header setup ===
+	if miner.chainConfig.IsPrague1(header.Number, header.Time) {
+		header.ParentProposerPubkey = genParams.proposerPubkey
+	}
+	// === END OF InsChain specific header setup ===
 	// Could potentially happen if starting to mine in an odd state.
 	// Note genParams.coinbase can be different with header.Coinbase
 	// since clique algorithm can modify the coinbase field in header.
@@ -344,7 +357,15 @@ func (miner *Miner) applyTransaction(env *environment, tx *types.Transaction) (*
 		snap = env.state.Snapshot()
 		gp   = env.gasPool.Gas()
 	)
-	receipt, err := core.ApplyTransaction(env.evm, env.gasPool, env.state, env.header, tx, &env.header.GasUsed)
+	// ===InsChain specific applyTransaction ===
+	blockGasUsed := &env.header.GasUsed
+	if tx.Type() == types.PoLTxType {
+		blockGasUsed = new(uint64)
+	}
+	// === END OF InsChain specific applyTransaction ===
+
+
+	receipt, err := core.ApplyTransaction(env.evm, env.gasPool, env.state, env.header, tx, blockGasUsed)
 	if err != nil {
 		env.state.RevertToSnapshot(snap)
 		env.gasPool.SetGas(gp)
@@ -559,4 +580,31 @@ func signalToErr(signal int32) error {
 	default:
 		panic(fmt.Errorf("undefined signal %d", signal))
 	}
+}
+//===InsChain specific commitPoLTx===
+func (miner *Miner) commitPoLTx(env *environment) error {
+	if env.gasPool == nil{
+		env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
+	}
+	if miner.chainConfig.IsPrague1(env.header.Number, env.header.Time) {
+		tx,err := types.NewPoLTx(
+			miner.chainConfig.ChainID,
+			miner.chainConfig.Inschain.Prague1.PoLDistributorAddress,
+			env.header.Number,
+			params.PoLTxGasLimit,
+			env.header.BaseFee,
+			env.header.ParentProposerPubkey,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create PoLTx: %w", err)
+		}
+		//start executing the transaction
+		env.state.SetTxContext(tx.Hash(), env.tcount)
+		if err := miner.commitTransaction(env, tx); err != nil {
+			log.Trace("failed to commit PoLTx: %w", err)
+			return err
+		}
+	
+	}
+	return nil
 }
