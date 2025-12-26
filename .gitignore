@@ -63,3 +63,7 @@ cmd/keeper/keeper
 
 # for testing docker builds 
 .github/workflows/docker-test.yml
+
+
+start-project/
+build/
