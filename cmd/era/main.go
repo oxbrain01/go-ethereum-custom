@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/internal/era"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/internal/flags"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/urfave/cli/v2"
@@ -100,6 +101,7 @@ func init() {
 
 func main() {
 	if err := app.Run(os.Args); err != nil {
+		log.Info("----Brain-log prepare: ", "fuccccccck");
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}

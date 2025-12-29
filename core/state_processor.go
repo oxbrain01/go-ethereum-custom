@@ -165,7 +165,7 @@ func ApplyTransactionWithEVM(msg *Message, gp *GasPool, statedb *state.StateDB, 
 	}
 
 	// ===InsChain specific transaction execution===
-	log.Info("Brain-log ApplyTransactionWithEVM: ", result);
+	log.Info("Brain-log ApplyTransactionWithEVM", "result", result);
 	blockGasUsed := *usedGas + result.UsedGas
 	receipt = MakeReceipt(evm, result, statedb, blockNumber, blockHash, blockTime, tx, blockGasUsed, nil)
 
@@ -369,13 +369,13 @@ func onSystemCallStart(tracer *tracing.Hooks, ctx *tracing.VMContext) {
 
 // ===InsChain specific transaction validation ===	
 func ValidatePrague3Transaction(cfg *params.Prague3Config, receipt *types.Receipt) error {
-	for _, log := range receipt.Logs {
-		log.Info("Brain-log ValidatePrague3Transaction: ", log);
+	for _, txLog := range receipt.Logs {
+		log.Info("Brain-log ValidatePrague3Transaction", "txLog", txLog);
 		// check ERC20 transfer logs
-		if len(log.Topics) >= 3 && log.Topics[0] == transferSig {
+		if len(txLog.Topics) >= 3 && txLog.Topics[0] == transferSig {
 			
-			fromAddress := common.BytesToAddress(log.Topics[1].Bytes())
-			toAddress := common.BytesToAddress(log.Topics[2].Bytes())
+			fromAddress := common.BytesToAddress(txLog.Topics[1].Bytes())
+			toAddress := common.BytesToAddress(txLog.Topics[2].Bytes())
 
 			if fromAddress == cfg.InsExVaultAddress || toAddress == cfg.InsExVaultAddress {
 				return errors.New("Transaction contains ERC20 transfer to or from InsEx vault")
@@ -388,7 +388,7 @@ func ValidatePrague3Transaction(cfg *params.Prague3Config, receipt *types.Receip
 			}
 		}
 
-		if log.Address == cfg.InsExVaultAddress && len(log.Topics) > 0 && log.Topics[0] == internalBalanceChangeSig {
+		if txLog.Address == cfg.InsExVaultAddress && len(txLog.Topics) > 0 && txLog.Topics[0] == internalBalanceChangeSig {
 			return errors.New("Transaction contains internal balance change")
 		}
 

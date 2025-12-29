@@ -279,13 +279,13 @@ func (beacon *Beacon) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 		if header.ParentProposerPubkey == nil {
 			return fmt.Errorf("header is missing parentProposerPubkey")
 		}
-	}else{
-		if header.ParentProposerPubkey == nil {
-			return errors.New("header has parentProposerPubkey set")
+	} else {
+		if header.ParentProposerPubkey != nil {
+			return errors.New("header has parentProposerPubkey set but should be nil after Prague1")
 		}
 	}
 
-	log.Info("Brain-log verifyHeader: ", prague1);
+	log.Info("Brain-log verifyHeader", "prague1", prague1);
 
 	// === END OF InsChain specific header verification ===
 	return nil

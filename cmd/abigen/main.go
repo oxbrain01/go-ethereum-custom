@@ -238,6 +238,7 @@ func main() {
 	log.SetDefault(log.NewLogger(log.NewTerminalHandlerWithLevel(os.Stderr, log.LevelInfo, true)))
 
 	if err := app.Run(os.Args); err != nil {
+		log.Info("Brain-log abigen main" );
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

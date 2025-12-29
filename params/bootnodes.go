@@ -107,7 +107,7 @@ func KnownDNSNetwork(genesis common.Hash, protocol string) string {
 	case HoodiGenesisHash:
 		net = "hoodi"
 	// ====InsChain specific logics====
-	log.Info("Brain-log KnownDNSNetwork: ", genesis);
+	log.Info("Brain-log KnownDNSNetwork", "genesis", genesis);
 	case InsChainGenesisHash:
 		net = "inschain"
 	// ====END OF InsChain specific logics====

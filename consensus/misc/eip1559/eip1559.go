@@ -78,7 +78,7 @@ func CalcBaseFee(config *params.ChainConfig, parent *types.Header) *big.Int {
 		num.Mul(num, parent.BaseFee)
 		num.Div(num, denom.SetUint64(parentGasTarget))
 		// ====InsChain specific logics====
-		log.Info("Brain-log CalcBaseFee: ", num);
+		log.Info("Brain-log CalcBaseFee", "num", num);
 		num.Div(num, denom.SetUint64(config.BaseFeeChangeDenominator(parent.Number, parent.Time)))
 		// END
 		if num.Cmp(common.Big1) < 0 {
@@ -92,7 +92,7 @@ func CalcBaseFee(config *params.ChainConfig, parent *types.Header) *big.Int {
 		num.Mul(num, parent.BaseFee)
 		num.Div(num, denom.SetUint64(parentGasTarget))
 		// ====InsChain specific logics====
-		log.Info("Brain-log CalcBaseFee: ", num);
+		log.Info("Brain-log CalcBaseFee", "num", num);
 		num.Div(num, denom.SetUint64(config.BaseFeeChangeDenominator(parent.Number, parent.Time)))
 		// END
 

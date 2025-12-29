@@ -334,7 +334,7 @@ func CopyHeader(h *Header) *Header {
 		*cpy.RequestsHash = *h.RequestsHash
 	}
 	// ===InsChain specific header fields ===
-	log.Info("Brain-log CopyHeader: ", h);
+	//log.Info("Brain-log CopyHeader");
 	if h.ParentProposerPubkey != nil {
 		cpy.ParentProposerPubkey = new(common.Pubkey)
 		*cpy.ParentProposerPubkey = *h.ParentProposerPubkey
@@ -422,7 +422,7 @@ func (b *Block) BeaconRoot() *common.Hash   { return b.header.ParentBeaconRoot }
 func (b *Block) RequestsHash() *common.Hash { return b.header.RequestsHash }
 // ===InsChain specific header fields ===
 func (b *Block) ProposerPubkey() *common.Pubkey { 
-	log.Info("Brain-log ProposerPubkey: ", b.header);
+	log.Info("Brain-log ProposerPubkey: ");
 	return b.header.ParentProposerPubkey }
 // ===END OF InsChain specific header fields ===
 func (b *Block) ExcessBlobGas() *uint64 {

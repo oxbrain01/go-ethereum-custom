@@ -202,7 +202,7 @@ func (sim *simulator) execute(ctx context.Context, blocks []simBlock) ([]*simBlo
 		}
 
 		// ====InsChain specific logics====
-		log.Info("Brain-log execute: ", result);
+		log.Info("Brain-log execute", "result", result);
 		isPrague1 := sim.chainConfig.IsPrague1(result.Number(), result.Time())
 		var expectedPoLHash common.Hash
 		if isPrague1 {
@@ -322,14 +322,14 @@ func (sim *simulator) processBlock(ctx context.Context, block *simBlock, header,
 			txHash = tx.Hash()
 		
 		)
-		log.Info("Brain-log processBlock: ", tx);
+		log.Info("Brain-log processBlock", "tx", tx);
 		txes[i] = tx
 		senders[txHash] = call.from()
 		tracer.reset(txHash, uint(i))
 		sim.state.SetTxContext(txHash, i)
 		// EoA check is always skipped, even in validation mode.
 		// ====InsChain specific logics====
-		log.Info("Brain-log processBlock: ", header);
+		log.Info("Brain-log processBlock", "header", header);
 		msg := call.ToMessage(header.BaseFee, !sim.validate, isPrague1, distributorAddress)
 		// END
 		result, err := applyMessageWithEVM(ctx, evm, msg, timeout, sim.gp)

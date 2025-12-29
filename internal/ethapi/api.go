@@ -726,7 +726,7 @@ func applyMessage(ctx context.Context, b Backend, args TransactionArgs, state *s
 		return nil, err
 	}
 	// ====InsChain specific logics LOG: MESSAGE====
-	log.Info("Brain-log applyMessage: ", header);
+	log.Info("Brain-log applyMessage", "header", header);
 	msg := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
 	// END
 	// Lower the basefee to 0 to avoid breaking EVM
@@ -880,7 +880,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 		return 0, err
 	}
 	// ====InsChain specific logics====
-	log.Info("Brain-log DoEstimateGas: ", header);
+	log.Info("Brain-log DoEstimateGas", "header", header);
 	call := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
 	// END
 	// Run the gas estimation and wrap any revertals into a custom return
@@ -1325,7 +1325,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		// Set the accesslist to the last al
 		args.AccessList = &accessList
 		// ====InsChain specific logics====
-		log.Info("Brain-log DoCall: ", header);
+		log.Info("Brain-log DoCall", "header", header);
 		msg := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
 		// END
 		// Apply the transaction with the access list tracer
@@ -1344,7 +1344,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		res, err := core.ApplyMessage(evm, msg, new(core.GasPool).AddGas(msg.GasLimit))
 		if err != nil {
 			// ====InsChain specific logics====
-			log.Info("Brain-log ApplyMessage: ", err);
+			log.Info("Brain-log ApplyMessage", "err", err);
 			return nil, 0, nil, fmt.Errorf("failed to apply transaction: %v err: %v", args.ToTransaction(types.LegacyTxType, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress).Hash(), err)
 		}
 		if tracer.Equal(prevTracer) {

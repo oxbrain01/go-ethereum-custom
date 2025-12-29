@@ -4,6 +4,45 @@
 
 set -e
 
+# Parse command line arguments
+QUIET=false
+VERBOSITY=3  # Default: INFO level (3), 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --quiet|-q)
+            QUIET=true
+            VERBOSITY=2  # WARN level to suppress INFO logs (including Brain-log)
+            shift
+            ;;
+        --verbosity|-v)
+            VERBOSITY="$2"
+            shift 2
+            ;;
+        --help|-h)
+            echo "Usage: $(basename "$0") [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --quiet, -q          Suppress INFO logs (sets verbosity to 2, hides Brain-log messages)"
+            echo "  --verbosity, -v NUM  Set log verbosity (0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=detail)"
+            echo "                       Default: 3 (info)"
+            echo "  --help, -h           Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  $(basename "$0")                  # Start with default verbosity (INFO logs)"
+            echo "  $(basename "$0") --quiet          # Start with WARN level (no INFO/Brain-log)"
+            echo "  $(basename "$0") -v 2             # Start with WARN level (same as --quiet)"
+            echo "  $(basename "$0") -v 1             # Start with ERROR level only"
+            exit 0
+            ;;
+        *)
+            echo "❌ Unknown option: $1"
+            echo "   Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Script is in scripts/start-prod/, so go up 2 levels to reach project root
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -25,6 +64,7 @@ CONFIG_FILE="${PROD_DIR}/config.toml"
 GENESIS_FILE="${PROD_DIR}/genesis.json"
 PASSWORD_FILE="${PROD_DIR}/.password"
 VALIDATOR_ADDRESS="0x356981ee849c96fC40e78B0B22715345E57746fb"
+SCRIPT_LOCK_FILE="${PROD_DIR}/.start-prod.lock"
 
 # Default ports (can be overridden in config.toml)
 # Using different ports to avoid conflict with Anvil (8545)
@@ -39,6 +79,140 @@ echo "📂 Production directory: $PROD_DIR"
 echo "📁 Data directory: $DATADIR"
 echo "📄 Config file: $CONFIG_FILE"
 echo ""
+
+# Check for script lock file to prevent multiple instances
+if [ -f "$SCRIPT_LOCK_FILE" ]; then
+    LOCK_PID=$(cat "$SCRIPT_LOCK_FILE" 2>/dev/null)
+    if [ ! -z "$LOCK_PID" ] && ps -p "$LOCK_PID" > /dev/null 2>&1; then
+        echo "⚠️  Script is already running (PID: $LOCK_PID)"
+        echo "   If this is incorrect, delete the lock file: $SCRIPT_LOCK_FILE"
+        echo "   Or wait for the existing instance to finish"
+        exit 1
+    else
+        echo "⚠️  Found stale lock file, removing it..."
+        rm -f "$SCRIPT_LOCK_FILE"
+    fi
+fi
+
+# Create lock file with current PID
+echo $$ > "$SCRIPT_LOCK_FILE"
+
+# Check for and stop existing geth processes using the same datadir or config
+echo "🔍 Checking for existing geth processes..."
+
+# Check for datadir lock file (indicates geth is using this datadir)
+LOCK_FILE="${DATADIR}/geth/LOCK"
+if [ -f "$LOCK_FILE" ]; then
+    echo "⚠️  Found lock file at $LOCK_FILE - geth may be running"
+    # Try to find the process
+    EXISTING_GETH=$(ps aux | grep -E "[g]eth.*--config.*config.toml|[g]eth.*--datadir.*$DATADIR" | awk '{print $2}' | tr '\n' ' ')
+    if [ ! -z "$EXISTING_GETH" ]; then
+        echo "   Found geth process(es): $EXISTING_GETH"
+    fi
+fi
+
+# Find all geth processes that might be using our config or datadir
+EXISTING_GETH=$(ps aux | grep -E "[g]eth.*--config.*config.toml|[g]eth.*--datadir.*start-prod" | awk '{print $2}' | tr '\n' ' ')
+
+if [ ! -z "$EXISTING_GETH" ]; then
+    echo "⚠️  Found existing geth process(es): $EXISTING_GETH"
+    echo "🛑 Stopping existing processes..."
+    for pid in $EXISTING_GETH; do
+        if ps -p "$pid" > /dev/null 2>&1; then
+            echo "   Stopping PID $pid..."
+            kill -TERM "$pid" 2>/dev/null || true
+        fi
+    done
+    sleep 3
+    # Force kill if still running
+    for pid in $EXISTING_GETH; do
+        if ps -p "$pid" > /dev/null 2>&1; then
+            echo "   Force killing PID $pid..."
+            kill -9 "$pid" 2>/dev/null || true
+        fi
+    done
+    sleep 2
+    # Remove lock file if it still exists
+    if [ -f "$LOCK_FILE" ]; then
+        echo "   Removing stale lock file..."
+        rm -f "$LOCK_FILE"
+    fi
+    echo "✅ Existing processes stopped"
+    echo ""
+fi
+
+# Check for and stop existing beacon simulator processes
+echo "🔍 Checking for existing beacon simulator processes..."
+BEACON_SCRIPT="${PROJECT_ROOT}/scripts/beacon-simulator-fixed.py"
+BEACON_LOCK_FILE="/tmp/beacon-simulator.lock"
+if [ -f "$BEACON_SCRIPT" ]; then
+    # Find all beacon simulator processes using the same script
+    EXISTING_BEACON=$(ps aux | grep -E "[p]ython.*beacon-simulator-fixed.py" | awk '{print $2}' | tr '\n' ' ')
+    if [ ! -z "$EXISTING_BEACON" ]; then
+        echo "⚠️  Found existing beacon simulator process(es): $EXISTING_BEACON"
+        echo "🛑 Stopping existing beacon simulators..."
+        for pid in $EXISTING_BEACON; do
+            if ps -p "$pid" > /dev/null 2>&1; then
+                echo "   Stopping beacon simulator PID $pid..."
+                kill -TERM "$pid" 2>/dev/null || true
+            fi
+        done
+        sleep 2
+        # Force kill if still running
+        for pid in $EXISTING_BEACON; do
+            if ps -p "$pid" > /dev/null 2>&1; then
+                echo "   Force killing beacon simulator PID $pid..."
+                kill -9 "$pid" 2>/dev/null || true
+            fi
+        done
+        sleep 1
+        # Remove lock file if it exists
+        if [ -f "$BEACON_LOCK_FILE" ]; then
+            echo "   Removing stale beacon simulator lock file..."
+            rm -f "$BEACON_LOCK_FILE"
+        fi
+        echo "✅ Existing beacon simulators stopped"
+        echo ""
+    elif [ -f "$BEACON_LOCK_FILE" ]; then
+        # Lock file exists but no process found - remove stale lock
+        echo "⚠️  Found stale beacon simulator lock file, removing it..."
+        rm -f "$BEACON_LOCK_FILE"
+        echo ""
+    fi
+fi
+
+# Also check for processes using the same ports
+echo "🔍 Checking for processes using the same ports..."
+PORT_CONFLICTS=false
+if command -v lsof > /dev/null 2>&1; then
+    if lsof -ti:$HTTP_PORT > /dev/null 2>&1; then
+        echo "⚠️  Port $HTTP_PORT (HTTP) is in use"
+        PORT_CONFLICTS=true
+    fi
+    if lsof -ti:$WS_PORT > /dev/null 2>&1; then
+        echo "⚠️  Port $WS_PORT (WebSocket) is in use"
+        PORT_CONFLICTS=true
+    fi
+    if lsof -ti:$AUTH_PORT > /dev/null 2>&1; then
+        echo "⚠️  Port $AUTH_PORT (Auth) is in use"
+        PORT_CONFLICTS=true
+    fi
+
+    if [ "$PORT_CONFLICTS" = true ]; then
+        echo "🛑 Stopping processes using these ports..."
+        lsof -ti:$HTTP_PORT 2>/dev/null | xargs kill -TERM 2>/dev/null || true
+        lsof -ti:$WS_PORT 2>/dev/null | xargs kill -TERM 2>/dev/null || true
+        lsof -ti:$AUTH_PORT 2>/dev/null | xargs kill -TERM 2>/dev/null || true
+        sleep 2
+        # Force kill if still running
+        lsof -ti:$HTTP_PORT 2>/dev/null | xargs kill -9 2>/dev/null || true
+        lsof -ti:$WS_PORT 2>/dev/null | xargs kill -9 2>/dev/null || true
+        lsof -ti:$AUTH_PORT 2>/dev/null | xargs kill -9 2>/dev/null || true
+        sleep 1
+        echo "✅ Port conflicts resolved"
+        echo ""
+    fi
+fi
 
 # Check if geth is built
 GETH_BINARY="./build/bin/geth"
@@ -250,6 +424,11 @@ echo "   • Network: Custom Blockchain (NetworkId = 2026, ChainId = $CHAIN_ID)"
 echo "   • Sync Mode: Snap (fast sync with full state)"
 echo "   • History Mode: All (full historical data)"
 echo "   • Cache: 4096 MB (production default)"
+if [ "$QUIET" = true ]; then
+    echo "   • Log Verbosity: $VERBOSITY (WARN - Brain-log messages suppressed)"
+else
+    echo "   • Log Verbosity: $VERBOSITY (INFO - all logs including Brain-log)"
+fi
 echo ""
 echo "🔌 Enabled APIs:"
 echo "   • HTTP APIs: eth, net, web3, engine, admin, debug, txpool, miner"
@@ -292,11 +471,12 @@ cleanup() {
     if [ ! -z "$GETH_PID" ]; then
         kill "$GETH_PID" 2>/dev/null || true
     fi
+    rm -f "$SCRIPT_LOCK_FILE"
     exit 0
 }
 
 # Trap signals for graceful shutdown
-trap cleanup INT TERM
+trap cleanup INT TERM EXIT
 
 # Start geth with config file
 echo "🚀 Starting Geth..."
@@ -308,6 +488,7 @@ echo ""
 # Note: --mine flag doesn't work with Clique+Beacon, we need SimulatedBeacon or Engine API
 "$GETH_BINARY" \
     --config "$CONFIG_FILE" \
+    --verbosity "$VERBOSITY" \
     --graphql \
     --unlock "$VALIDATOR_ADDRESS" \
     --password "$PASSWORD_FILE" \

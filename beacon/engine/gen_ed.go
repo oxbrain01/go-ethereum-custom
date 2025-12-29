@@ -31,10 +31,11 @@ func (e ExecutableData) MarshalJSON() ([]byte, error) {
 		BaseFeePerGas    *hexutil.Big            `json:"baseFeePerGas" gencodec:"required"`
 		BlockHash        common.Hash             `json:"blockHash"     gencodec:"required"`
 		Transactions     []hexutil.Bytes         `json:"transactions"  gencodec:"required"`
-		Withdrawals      []*types.Withdrawal     `json:"withdrawals"`
-		BlobGasUsed      *hexutil.Uint64         `json:"blobGasUsed"`
-		ExcessBlobGas    *hexutil.Uint64         `json:"excessBlobGas"`
-		ExecutionWitness *types.ExecutionWitness `json:"executionWitness,omitempty"`
+		Withdrawals          []*types.Withdrawal     `json:"withdrawals"`
+		BlobGasUsed          *hexutil.Uint64         `json:"blobGasUsed"`
+		ExcessBlobGas        *hexutil.Uint64         `json:"excessBlobGas"`
+		ExecutionWitness     *types.ExecutionWitness `json:"executionWitness,omitempty"`
+		ParentProposerPubkey *common.Pubkey          `json:"parentProposerPubkey"`
 	}
 	var enc ExecutableData
 	enc.ParentHash = e.ParentHash
@@ -60,6 +61,7 @@ func (e ExecutableData) MarshalJSON() ([]byte, error) {
 	enc.BlobGasUsed = (*hexutil.Uint64)(e.BlobGasUsed)
 	enc.ExcessBlobGas = (*hexutil.Uint64)(e.ExcessBlobGas)
 	enc.ExecutionWitness = e.ExecutionWitness
+	enc.ParentProposerPubkey = e.ParentProposerPubkey
 	return json.Marshal(&enc)
 }
 
@@ -80,10 +82,11 @@ func (e *ExecutableData) UnmarshalJSON(input []byte) error {
 		BaseFeePerGas    *hexutil.Big            `json:"baseFeePerGas" gencodec:"required"`
 		BlockHash        *common.Hash            `json:"blockHash"     gencodec:"required"`
 		Transactions     []hexutil.Bytes         `json:"transactions"  gencodec:"required"`
-		Withdrawals      []*types.Withdrawal     `json:"withdrawals"`
-		BlobGasUsed      *hexutil.Uint64         `json:"blobGasUsed"`
-		ExcessBlobGas    *hexutil.Uint64         `json:"excessBlobGas"`
-		ExecutionWitness *types.ExecutionWitness `json:"executionWitness,omitempty"`
+		Withdrawals          []*types.Withdrawal     `json:"withdrawals"`
+		BlobGasUsed          *hexutil.Uint64         `json:"blobGasUsed"`
+		ExcessBlobGas        *hexutil.Uint64         `json:"excessBlobGas"`
+		ExecutionWitness     *types.ExecutionWitness `json:"executionWitness,omitempty"`
+		ParentProposerPubkey *common.Pubkey          `json:"parentProposerPubkey"`
 	}
 	var dec ExecutableData
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -159,6 +162,9 @@ func (e *ExecutableData) UnmarshalJSON(input []byte) error {
 	}
 	if dec.ExecutionWitness != nil {
 		e.ExecutionWitness = dec.ExecutionWitness
+	}
+	if dec.ParentProposerPubkey != nil {
+		e.ParentProposerPubkey = dec.ParentProposerPubkey
 	}
 	return nil
 }

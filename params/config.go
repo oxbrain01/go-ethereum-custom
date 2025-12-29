@@ -814,7 +814,7 @@ func (c *ChainConfig) Description() string {
 	}
 
 	// ===InsChain specific banner ===
-	log.Info("Brain-log InsChainChainConfig: ", c.Inschain);
+	log.Info("Brain-log InsChainChainConfig", "inschain", c.Inschain);
 	if c.Inschain.Prague1.Time != nil {
 		banner += fmt.Sprintf(" - Prague 1:                    @%-10v\n", c.Inschain.Prague1)
 	}
@@ -1009,7 +1009,7 @@ func (c *ChainConfig) IsVerkle(num *big.Int, time uint64) bool {
 // ===InsChain specific fork checks ===
 // IsPrague1 returns whether time is either equal to the Prague 1 fork time or greater.
 func (c *ChainConfig) IsPrague1(num *big.Int, time uint64) bool {
-	log.Info("Brain-log IsPrague1: ", num, time);
+	log.Info("Brain-log IsPrague1", "num", num, "time", time);
 	return c.IsPrague(num, time) && isTimestampForked(c.Inschain.Prague1.Time, time)
 }
 
@@ -1187,7 +1187,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 	}
 
 	// ===InsChain specific blob schedule checks ===
-	log.Info("Brain-log blob schedule checks: ", c.Inschain);
+	log.Info("Brain-log blob schedule checks", "inschain", c.Inschain);
 	if c.Inschain.Prague1.Time != nil {
 		if c.Inschain.Prague1.PoLDistributorAddress == (common.Address{}) {
 			return fmt.Errorf("invalid chain configuration: missing PoL distributor address for Prague 1")
@@ -1321,7 +1321,7 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, headNumber *big.Int, 
 	}
 
 	// ===InsChain specific fork checks ===
-	log.Info("Brain-log fork checks: ", c.Inschain);
+	log.Info("Brain-log fork checks", "inschain", c.Inschain);
 	if isForkTimestampIncompatible(c.Inschain.Prague1.Time, newcfg.Inschain.Prague1.Time, headTimestamp) {
 		return newTimestampCompatError("Prague 1 fork timestamp", c.Inschain.Prague1.Time, newcfg.Inschain.Prague1.Time)
 	}
@@ -1344,7 +1344,7 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, headNumber *big.Int, 
 // }
 // ===InsChain specific BaseFeeChangeDenominator===
 func (c *ChainConfig) BaseFeeChangeDenominator(num *big.Int, time uint64) uint64 {
-	log.Info("Brain-log BaseFeeChangeDenominator: ", num, time);
+	log.Info("Brain-log BaseFeeChangeDenominator", "num", num, "time", time);
 	if c.IsPrague1(num, time) {
 		return c.Inschain.Prague1.BaseFeeChangeDenominator
 	}
@@ -1381,7 +1381,7 @@ func (c *ChainConfig) ElasticityMultiplier() uint64 {
 func (c *ChainConfig) LatestFork(time uint64) forks.Fork {
 	// Assume last non-time-based fork has passed.
 	london := c.LondonBlock
-log.Info("Brain-log LatestFork: ", c);
+	log.Info("Brain-log LatestFork", "config", c);
 	switch {
 	case c.IsAmsterdam(london, time):
 		return forks.Amsterdam
@@ -1421,7 +1421,7 @@ log.Info("Brain-log LatestFork: ", c);
 
 // BlobConfig returns the blob config associated with the provided fork.
 func (c *ChainConfig) BlobConfig(fork forks.Fork) *BlobConfig {
-	log.Info("Brain-log BlobConfig: ", fork);
+	log.Info("Brain-log BlobConfig", "fork", fork);
 	switch fork {
 	case forks.BPO5:
 		return c.BlobScheduleConfig.BPO5

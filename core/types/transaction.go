@@ -218,7 +218,7 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 	case SetCodeTxType:
 		inner = new(SetCodeTx)
 	// ===InsChain specific transaction types ===
-	log.Info("Brain-log decodeTyped: ", b);
+	log.Info("Brain-log decodeTyped", "b", b);
 	case PoLTxType:
 		inner = new(PoLTx)
 	// ===END OF InsChain specific transaction types ===

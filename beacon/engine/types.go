@@ -94,10 +94,13 @@ type ExecutableData struct {
 	BaseFeePerGas    *big.Int                `json:"baseFeePerGas" gencodec:"required"`
 	BlockHash        common.Hash             `json:"blockHash"     gencodec:"required"`
 	Transactions     [][]byte                `json:"transactions"  gencodec:"required"`
-	Withdrawals      []*types.Withdrawal     `json:"withdrawals"`
-	BlobGasUsed      *uint64                 `json:"blobGasUsed"`
-	ExcessBlobGas    *uint64                 `json:"excessBlobGas"`
-	ExecutionWitness *types.ExecutionWitness `json:"executionWitness,omitempty"`
+	Withdrawals          []*types.Withdrawal     `json:"withdrawals"`
+	BlobGasUsed          *uint64                 `json:"blobGasUsed"`
+	ExcessBlobGas        *uint64                 `json:"excessBlobGas"`
+	ExecutionWitness     *types.ExecutionWitness `json:"executionWitness,omitempty"`
+	// ===InsChain specific ExecutableData fields ===
+	ParentProposerPubkey *common.Pubkey `json:"parentProposerPubkey"`
+	// ===END OF InsChain specific ExecutableData fields ===
 }
 
 // JSON type overrides for executableData.
@@ -301,26 +304,27 @@ func ExecutableDataToBlockNoHash(data ExecutableData, versionedHashes []common.H
 	}
 
 	header := &types.Header{
-		ParentHash:       data.ParentHash,
-		UncleHash:        types.EmptyUncleHash,
-		Coinbase:         data.FeeRecipient,
-		Root:             data.StateRoot,
-		TxHash:           types.DeriveSha(types.Transactions(txs), trie.NewStackTrie(nil)),
-		ReceiptHash:      data.ReceiptsRoot,
-		Bloom:            types.BytesToBloom(data.LogsBloom),
-		Difficulty:       common.Big0,
-		Number:           new(big.Int).SetUint64(data.Number),
-		GasLimit:         data.GasLimit,
-		GasUsed:          data.GasUsed,
-		Time:             data.Timestamp,
-		BaseFee:          data.BaseFeePerGas,
-		Extra:            data.ExtraData,
-		MixDigest:        data.Random,
-		WithdrawalsHash:  withdrawalsRoot,
-		ExcessBlobGas:    data.ExcessBlobGas,
-		BlobGasUsed:      data.BlobGasUsed,
-		ParentBeaconRoot: beaconRoot,
-		RequestsHash:     requestsHash,
+		ParentHash:          data.ParentHash,
+		UncleHash:           types.EmptyUncleHash,
+		Coinbase:            data.FeeRecipient,
+		Root:                data.StateRoot,
+		TxHash:              types.DeriveSha(types.Transactions(txs), trie.NewStackTrie(nil)),
+		ReceiptHash:         data.ReceiptsRoot,
+		Bloom:               types.BytesToBloom(data.LogsBloom),
+		Difficulty:          common.Big0,
+		Number:              new(big.Int).SetUint64(data.Number),
+		GasLimit:            data.GasLimit,
+		GasUsed:             data.GasUsed,
+		Time:                data.Timestamp,
+		BaseFee:             data.BaseFeePerGas,
+		Extra:               data.ExtraData,
+		MixDigest:           data.Random,
+		WithdrawalsHash:     withdrawalsRoot,
+		ExcessBlobGas:       data.ExcessBlobGas,
+		BlobGasUsed:         data.BlobGasUsed,
+		ParentBeaconRoot:    beaconRoot,
+		RequestsHash:        requestsHash,
+		ParentProposerPubkey: data.ParentProposerPubkey,
 	}
 	return types.NewBlockWithHeader(header).
 			WithBody(types.Body{Transactions: txs, Uncles: nil, Withdrawals: data.Withdrawals}).
@@ -332,24 +336,25 @@ func ExecutableDataToBlockNoHash(data ExecutableData, versionedHashes []common.H
 // fields from the given block. It assumes the given block is post-merge block.
 func BlockToExecutableData(block *types.Block, fees *big.Int, sidecars []*types.BlobTxSidecar, requests [][]byte) *ExecutionPayloadEnvelope {
 	data := &ExecutableData{
-		BlockHash:        block.Hash(),
-		ParentHash:       block.ParentHash(),
-		FeeRecipient:     block.Coinbase(),
-		StateRoot:        block.Root(),
-		Number:           block.NumberU64(),
-		GasLimit:         block.GasLimit(),
-		GasUsed:          block.GasUsed(),
-		BaseFeePerGas:    block.BaseFee(),
-		Timestamp:        block.Time(),
-		ReceiptsRoot:     block.ReceiptHash(),
-		LogsBloom:        block.Bloom().Bytes(),
-		Transactions:     encodeTransactions(block.Transactions()),
-		Random:           block.MixDigest(),
-		ExtraData:        block.Extra(),
-		Withdrawals:      block.Withdrawals(),
-		BlobGasUsed:      block.BlobGasUsed(),
-		ExcessBlobGas:    block.ExcessBlobGas(),
-		ExecutionWitness: block.ExecutionWitness(),
+		BlockHash:            block.Hash(),
+		ParentHash:           block.ParentHash(),
+		FeeRecipient:         block.Coinbase(),
+		StateRoot:            block.Root(),
+		Number:               block.NumberU64(),
+		GasLimit:             block.GasLimit(),
+		GasUsed:              block.GasUsed(),
+		BaseFeePerGas:        block.BaseFee(),
+		Timestamp:            block.Time(),
+		ReceiptsRoot:         block.ReceiptHash(),
+		LogsBloom:            block.Bloom().Bytes(),
+		Transactions:         encodeTransactions(block.Transactions()),
+		Random:               block.MixDigest(),
+		ExtraData:            block.Extra(),
+		Withdrawals:          block.Withdrawals(),
+		BlobGasUsed:          block.BlobGasUsed(),
+		ExcessBlobGas:        block.ExcessBlobGas(),
+		ExecutionWitness:     block.ExecutionWitness(),
+		ParentProposerPubkey: block.ProposerPubkey(),
 	}
 
 	// Add blobs.

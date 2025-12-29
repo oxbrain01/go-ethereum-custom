@@ -276,6 +276,7 @@ def main():
     last_timestamp = 0
     last_token_refresh = int(time.time())
     TOKEN_REFRESH_INTERVAL = 300  # Refresh token every 5 minutes
+    printed_blocks = set()  # Track blocks we've already printed to avoid duplicates
     
     while True:
         try:
@@ -347,10 +348,15 @@ def main():
                         elif status:
                             print(f"⚠️  Payload status: {status}")
                 
-                if block_num > last_block:
+                # Only print each block once (track by block number to avoid duplicates)
+                if block_num > last_block and block_num not in printed_blocks:
                     print(f"✅ Block {block_num} created! (hash: {head_hash[:10]}...)")
+                    printed_blocks.add(block_num)
                     last_block = block_num
                     last_timestamp = block_timestamp
+                    # Clean up old entries to prevent memory growth (keep last 1000 blocks)
+                    if len(printed_blocks) > 1000:
+                        printed_blocks = {b for b in printed_blocks if b > block_num - 1000}
             
             time.sleep(1)  # Check every second
             

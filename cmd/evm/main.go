@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"github.com/ethereum/go-ethereum/internal/debug"
 	"github.com/ethereum/go-ethereum/internal/flags"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
 
 	// Force-load the tracer engines to trigger registration
@@ -276,6 +277,7 @@ func init() {
 
 func main() {
 	if err := app.Run(os.Args); err != nil {
+		log.Info("----Brain-log prepare: ", "fuccccccck")
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

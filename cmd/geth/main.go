@@ -282,9 +282,12 @@ func init() {
 		prompt.Stdin.Close() // Resets terminal mode.
 		return nil
 	}
+
+	log.Info("Brain-log ok ok ok ok ok ok " );
 }
 
 func main() {
+		log.Info("----Brain-log prepare: ", "fuccccccck");
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -315,7 +318,7 @@ func prepare(ctx *cli.Context) {
 	// END
 	}
 
-	log.Info("Brain-log prepare: ", ctx);
+	log.Info("Brain-log prepare", "ctx", ctx);
 
 	// If we're a full node on mainnet without --cache specified, bump default cache allowance
 	if !ctx.IsSet(utils.CacheFlag.Name) && !ctx.IsSet(utils.NetworkIdFlag.Name) {
@@ -338,7 +341,7 @@ func geth(ctx *cli.Context) error {
 	if args := ctx.Args().Slice(); len(args) > 0 {
 		return fmt.Errorf("invalid command: %q", args[0])
 	}
-
+	log.Info("Brain-log startNode geth ok ok start first" );
 	prepare(ctx)
 	stack := makeFullNode(ctx)
 	defer stack.Close()

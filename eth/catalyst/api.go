@@ -335,13 +335,14 @@ func (api *ConsensusAPI) forkchoiceUpdated(update engine.ForkchoiceStateV1, payl
 	// will replace it arbitrarily many times in between.
 	if payloadAttributes != nil {
 		args := &miner.BuildPayloadArgs{
-			Parent:       update.HeadBlockHash,
-			Timestamp:    payloadAttributes.Timestamp,
-			FeeRecipient: payloadAttributes.SuggestedFeeRecipient,
-			Random:       payloadAttributes.Random,
-			Withdrawals:  payloadAttributes.Withdrawals,
-			BeaconRoot:   payloadAttributes.BeaconRoot,
-			Version:      payloadVersion,
+			Parent:         update.HeadBlockHash,
+			Timestamp:      payloadAttributes.Timestamp,
+			FeeRecipient:   payloadAttributes.SuggestedFeeRecipient,
+			Random:         payloadAttributes.Random,
+			Withdrawals:    payloadAttributes.Withdrawals,
+			BeaconRoot:     payloadAttributes.BeaconRoot,
+			Version:        payloadVersion,
+			ProposerPubkey: payloadAttributes.ProposerPubkey,
 		}
 		id := args.Id()
 		// If we already are busy generating this work, then we do not need
@@ -726,7 +727,7 @@ func (api *ConsensusAPI) newPayload(params engine.ExecutableData, versionedHashe
 	// If we already have the block locally, ignore the entire execution and just
 	// return a fake success.
 	if block := api.eth.BlockChain().GetBlockByHash(params.BlockHash); block != nil {
-		log.Warn("Ignoring already known beacon payload", "number", params.Number, "hash", params.BlockHash, "age", common.PrettyAge(time.Unix(int64(block.Time()), 0)))
+		log.Debug("Ignoring already known beacon payload", "number", params.Number, "hash", params.BlockHash, "age", common.PrettyAge(time.Unix(int64(block.Time()), 0)))
 		hash := block.Hash()
 		return engine.PayloadStatusV1{Status: engine.VALID, LatestValidHash: &hash}, nil
 	}
