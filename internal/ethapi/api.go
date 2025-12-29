@@ -882,6 +882,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 	// ====InsChain specific logics====
 	log.Info("Brain-log DoEstimateGas", "header", header);
 	call := args.ToMessage(header.BaseFee, true, b.ChainConfig().IsPrague1(header.Number, header.Time), b.ChainConfig().Inschain.Prague1.PoLDistributorAddress)
+		log.Info("Brain-log DoEstimateGas", "header- after", header);
 	// END
 	// Run the gas estimation and wrap any revertals into a custom return
 	estimate, revert, err := gasestimator.Estimate(ctx, call, opts, gasCap)

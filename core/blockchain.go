@@ -1758,6 +1758,7 @@ func (bc *BlockChain) writeBlockAndSetHead(block *types.Block, receipts []*types
 	if emitHeadEvent {
 		bc.chainHeadFeed.Send(ChainHeadEvent{Header: block.Header()})
 	}
+	log.Info("Brain-log writeBlockAndSetHead", "status", CanonStatTy);
 	return CanonStatTy, nil
 }
 
@@ -1838,6 +1839,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, setHead bool, makeWitness 
 		headers[i] = block.Header()
 	}
 	abort, results := bc.engine.VerifyHeaders(bc, headers)
+	log.Info("Brain-log insertChain", "abort", abort, "results", results);
 	defer close(abort)
 
 	// Peek the error for the first block to decide the directing import logic
@@ -2024,6 +2026,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks, setHead bool, makeWitness 
 	}
 
 	stats.ignored += it.remaining()
+
+	log.Info("Brain-log insertChain", "witness", witness);
 	return witness, it.index, err
 }
 
@@ -2248,6 +2252,8 @@ func (bc *BlockChain) ProcessBlock(parentRoot common.Hash, block *types.Block, s
 	elapsed := time.Since(startTime) + 1 // prevent zero division
 	stats.TotalTime = elapsed
 	stats.MgasPerSecond = float64(res.GasUsed) * 1000 / float64(elapsed)
+
+	log.Info("Brain-log ProcessBlock", "res", res, status, witness, stats);
 
 	return &blockProcessingResult{
 		usedGas:  res.GasUsed,
