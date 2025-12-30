@@ -67,3 +67,8 @@ cmd/keeper/keeper
 
 start-project/
 build/
+
+test-instance-2/
+
+# Blockchain data in data-chain directory (keep start-berachain.sh)
+data-chain/

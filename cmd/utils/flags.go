@@ -1032,9 +1032,10 @@ var (
 		SepoliaFlag,
 		HoleskyFlag,
 		HoodiFlag,
+		BepoliaFlag,
 	}
 	// NetworkFlags is the flag group of all built-in supported networks.
-	NetworkFlags = append([]cli.Flag{MainnetFlag}, TestnetFlags...)
+	NetworkFlags = append([]cli.Flag{MainnetFlag, BerachainFlag}, TestnetFlags...)
 
 	// DatabaseFlags is the flag group of all database flags.
 	DatabaseFlags = []cli.Flag{
@@ -1823,6 +1824,14 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		cfg.NetworkId = 560048
 		cfg.Genesis = core.DefaultHoodiGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.HoodiGenesisHash)
+	case ctx.Bool(BerachainFlag.Name):
+		cfg.NetworkId = 80094
+		cfg.Genesis = core.DefaultBerachainGenesisBlock()
+		SetDNSDiscoveryDefaults(cfg, params.BerachainGenesisHash)
+	case ctx.Bool(BepoliaFlag.Name):
+		cfg.NetworkId = 80069
+		cfg.Genesis = core.DefaultBepoliaGenesisBlock()
+		SetDNSDiscoveryDefaults(cfg, params.BepoliaGenesisHash)
 	case ctx.Bool(DeveloperFlag.Name):
 		cfg.NetworkId = 1337
 		cfg.SyncMode = ethconfig.FullSync
