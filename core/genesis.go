@@ -668,7 +668,7 @@ func DefaultInsChainGenesisBlock() *Genesis {
 		GasLimit:   0x1c9c380,
 		Difficulty: big.NewInt(0x01),
 		Timestamp:  1742212800,
-		Alloc:      decodePrealloc(insAllocData), // REFACTOR: need add alloc data
+		Alloc:      make(types.GenesisAlloc), // Empty allocation for now
 	}
 }
 

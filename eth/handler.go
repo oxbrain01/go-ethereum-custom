@@ -233,6 +233,7 @@ func (h *handler) decHandlers() {
 // runEthPeer registers an eth peer into the joint eth/snap peerset, adds it to
 // various subsystems and starts handling messages.
 func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
+	log.Info("Brain-log runEthPeer", "entry", "new peer connecting", "peer", peer.ID(), "name", peer.Name())
 	if !h.incHandlers() {
 		return p2p.DiscQuitting
 	}
@@ -247,10 +248,13 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 	}
 
 	// Execute the Ethereum handshake
+	log.Info("Brain-log runEthPeer", "step", "executing handshake", "peer", peer.ID())
 	if err := peer.Handshake(h.networkID, h.chain, h.blockRange.currentRange()); err != nil {
+		log.Error("Brain-log runEthPeer", "error", "handshake failed", "peer", peer.ID(), "err", err)
 		peer.Log().Debug("Ethereum handshake failed", "err", err)
 		return err
 	}
+	log.Info("Brain-log runEthPeer", "step", "handshake completed", "peer", peer.ID())
 	reject := false // reserved peer slots
 	if h.downloader.ConfigSyncMode() == ethconfig.SnapSync {
 		if snap == nil {
@@ -269,9 +273,11 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 		}
 	}
 	peer.Log().Debug("Ethereum peer connected", "name", peer.Name())
+	log.Info("Brain-log runEthPeer", "step", "registering peer", "peer", peer.ID(), "version", peer.Version())
 
 	// Register the peer locally
 	if err := h.peers.registerPeer(peer, snap); err != nil {
+		log.Error("Brain-log runEthPeer", "error", "peer registration failed", "peer", peer.ID(), "err", err)
 		peer.Log().Error("Ethereum peer registration failed", "err", err)
 		return err
 	}
@@ -283,18 +289,22 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 	}
 	// Register the peer in the downloader. If the downloader considers it banned, we disconnect
 	if err := h.downloader.RegisterPeer(peer.ID(), peer.Version(), peer); err != nil {
+		log.Error("Brain-log runEthPeer", "error", "failed to register in downloader", "peer", peer.ID(), "err", err)
 		peer.Log().Error("Failed to register peer in eth syncer", "err", err)
 		return err
 	}
 	if snap != nil {
 		if err := h.downloader.SnapSyncer.Register(snap); err != nil {
+			log.Error("Brain-log runEthPeer", "error", "failed to register in snap syncer", "peer", peer.ID(), "err", err)
 			peer.Log().Error("Failed to register peer in snap syncer", "err", err)
 			return err
 		}
 	}
 	// Propagate existing transactions. new transactions appearing
 	// after this will be sent via broadcasts.
+	log.Info("Brain-log runEthPeer", "step", "syncing transactions with peer", "peer", peer.ID())
 	h.syncTransactions(peer)
+	log.Info("Brain-log runEthPeer", "exit", "peer setup complete", "peer", peer.ID(), "snap", snap != nil)
 
 	// Create a notification channel for pending requests if the peer goes down
 	dead := make(chan struct{})

@@ -289,9 +289,14 @@ func (st *stateTransition) buyGas() error {
 	if overflow {
 		return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, st.msg.From.Hex())
 	}
-	if have, want := st.state.GetBalance(st.msg.From), balanceCheckU256; have.Cmp(want) < 0 {
-		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From.Hex(), have, want)
+	// ===InsChain specific: Skip balance check for system transactions ===
+	// SystemAddress transactions (like PoLTx) don't require sender to have funds
+	if st.msg.From != params.SystemAddress {
+		if have, want := st.state.GetBalance(st.msg.From), balanceCheckU256; have.Cmp(want) < 0 {
+			return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From.Hex(), have, want)
+		}
 	}
+	// ===END OF InsChain specific ===
 	if err := st.gp.SubGas(st.msg.GasLimit); err != nil {
 		return err
 	}
@@ -302,8 +307,13 @@ func (st *stateTransition) buyGas() error {
 	st.gasRemaining = st.msg.GasLimit
 
 	st.initialGas = st.msg.GasLimit
-	mgvalU256, _ := uint256.FromBig(mgval)
-	st.state.SubBalance(st.msg.From, mgvalU256, tracing.BalanceDecreaseGasBuy)
+	// ===InsChain specific: Skip balance deduction for system transactions ===
+	// SystemAddress transactions (like PoLTx) don't deduct gas from sender balance
+	if st.msg.From != params.SystemAddress {
+		mgvalU256, _ := uint256.FromBig(mgval)
+		st.state.SubBalance(st.msg.From, mgvalU256, tracing.BalanceDecreaseGasBuy)
+	}
+	// ===END OF InsChain specific ===
 	return nil
 }
 

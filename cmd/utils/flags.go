@@ -1839,6 +1839,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		cfg.NetworkId = 560048
 		cfg.Genesis = core.DefaultHoodiGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.HoodiGenesisHash)
+	case ctx.Bool(InsChainFlag.Name):
+		cfg.Genesis = core.DefaultInsChainGenesisBlock()
+		SetDNSDiscoveryDefaults(cfg, params.InsChainGenesisHash)
 	case ctx.Bool(DeveloperFlag.Name):
 		cfg.NetworkId = 1337
 		cfg.SyncMode = ethconfig.FullSync
@@ -1934,9 +1937,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		}
 		cfg.Genesis = genesis
 	default:
-		if ctx.Uint64(NetworkIdFlag.Name) == 1 {
-			SetDNSDiscoveryDefaults(cfg, params.MainnetGenesisHash)
-		}
+		// Default to InsChain mainnet when no network flag is specified
+		cfg.Genesis = core.DefaultInsChainGenesisBlock()
+		SetDNSDiscoveryDefaults(cfg, params.InsChainGenesisHash)
 	}
 	if ctx.IsSet(NetworkIdFlag.Name) {
 		// Typically it's best to automatically set the network ID to the chainID,

@@ -412,7 +412,7 @@ var (
 				MinimumBaseFeeWei: big.NewInt(0),
 			},
 			Prague3: Prague3Config{
-				Time: newUint64(0),
+				Time: nil, // Prague3 not enabled at genesis - set Time to enable
 				InsExVaultAddress: common.HexToAddress("0x0000000000000000000000000000000000000000"),
 				BlockedAddresses: []common.Address{
 					common.HexToAddress("0x0000000000000000000000000000000000000000"),

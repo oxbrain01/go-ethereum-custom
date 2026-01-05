@@ -202,8 +202,10 @@ func (miner *Miner) prepareWork(genParams *generateParams, witness bool) (*envir
 	miner.confMu.RLock()
 	defer miner.confMu.RUnlock()
 
+	log.Info("Brain-log prepareWork", "entry", "preparing work for block", "witness", witness)
 	// Find the parent block for sealing task
 	parent := miner.chain.CurrentBlock()
+	log.Info("Brain-log prepareWork", "step", "found parent block", "number", parent.Number.Uint64(), "hash", parent.Hash())
 	if genParams.parentHash != (common.Hash{}) {
 		block := miner.chain.GetBlockByHash(genParams.parentHash)
 		if block == nil {
@@ -604,13 +606,25 @@ func (miner *Miner) commitPoLTx(env *environment) error {
 		env.gasPool = new(core.GasPool).AddGas(env.header.GasLimit)
 	}
 	if miner.chainConfig.IsPrague1(env.header.Number, env.header.Time) {
+		// Get parent block to retrieve proposer pubkey
+		// In Prague1, ParentProposerPubkey in header is nil, so we need to get it from parent block
+		var proposerPubkey *common.Pubkey
+		parentBlock := miner.chain.GetBlockByHash(env.header.ParentHash)
+		if parentBlock != nil {
+			proposerPubkey = parentBlock.ProposerPubkey()
+		}
+		// If still nil (e.g., genesis block), use zero pubkey as fallback
+		if proposerPubkey == nil {
+			proposerPubkey = &common.Pubkey{}
+		}
+		
 		tx,err := types.NewPoLTx(
 			miner.chainConfig.ChainID,
 			miner.chainConfig.Inschain.Prague1.PoLDistributorAddress,
 			env.header.Number,
 			params.PoLTxGasLimit,
 			env.header.BaseFee,
-			env.header.ParentProposerPubkey,
+			proposerPubkey,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create PoLTx: %w", err)

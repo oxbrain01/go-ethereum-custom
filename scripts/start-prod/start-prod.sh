@@ -140,9 +140,13 @@ fi
 
 if [ "$ACCOUNT_EXISTS" = false ]; then
     echo "🔑 Importing validator account..."
-    echo "validator123" | "$GETH_BINARY" --datadir "$DATADIR" account import <(echo "$VALIDATOR_PRIVATE_KEY") --password <(echo "validator123") 2>/dev/null || {
+    # Create temporary key file for import
+    TMP_KEYFILE=$(mktemp)
+    echo "$VALIDATOR_PRIVATE_KEY" | tr -d '\n' > "$TMP_KEYFILE"
+    echo "validator123" | "$GETH_BINARY" --datadir "$DATADIR" account import "$TMP_KEYFILE" --password <(echo "validator123") 2>/dev/null || {
         echo "validator123" | "$GETH_BINARY" --datadir "$DATADIR" account new --password <(echo "validator123") > /dev/null 2>&1
     }
+    rm -f "$TMP_KEYFILE"
 fi
 
 # Initialize genesis

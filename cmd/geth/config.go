@@ -221,7 +221,9 @@ func constructDevModeBanner(ctx *cli.Context, cfg gethConfig) string {
 
 // makeFullNode loads geth configuration and creates the Ethereum backend.
 func makeFullNode(ctx *cli.Context) *node.Node {
+	log.Info("Brain-log makeFullNode", "entry", "creating full node")
 	stack, cfg := makeConfigNode(ctx)
+	log.Info("Brain-log makeFullNode", "step", "config node created", "dataDir", cfg.Node.DataDir)
 	if ctx.IsSet(utils.OverrideOsaka.Name) {
 		v := ctx.Uint64(utils.OverrideOsaka.Name)
 		cfg.Eth.OverrideOsaka = &v
@@ -242,7 +244,9 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	// Start metrics export if enabled
 	utils.SetupMetrics(&cfg.Metrics)
 
+	log.Info("Brain-log makeFullNode", "step", "registering Ethereum service")
 	backend, eth := utils.RegisterEthService(stack, &cfg.Eth)
+	log.Info("Brain-log makeFullNode", "step", "Ethereum service registered", "backend", backend != nil, "eth", eth != nil)
 
 	// Create gauge with geth system and build information
 	if eth != nil { // The 'eth' backend may be nil in light mode
@@ -280,6 +284,7 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	}
 	utils.RegisterSyncOverrideService(stack, eth, synctarget, ctx.Bool(utils.ExitWhenSyncedFlag.Name))
 
+	log.Info("Brain-log makeFullNode", "step", "registering consensus mode", "dev", ctx.IsSet(utils.DeveloperFlag.Name), "beacon", ctx.IsSet(utils.BeaconApiFlag.Name))
 	if ctx.IsSet(utils.DeveloperFlag.Name) {
 		// Start dev mode.
 		simBeacon, err := catalyst.NewSimulatedBeacon(ctx.Uint64(utils.DeveloperPeriodFlag.Name), cfg.Eth.Miner.PendingFeeRecipient, eth)
@@ -300,13 +305,16 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 		blsyncer := blsync.NewClient(utils.MakeBeaconLightConfig(ctx))
 		blsyncer.SetEngineRPC(rpc.DialInProc(srv))
 		stack.RegisterLifecycle(blsyncer)
-	} else {
+		} else {
 		// Launch the engine API for interacting with external consensus client.
+		log.Info("Brain-log makeFullNode", "step", "registering catalyst service")
 		err := catalyst.Register(stack, eth)
 		if err != nil {
 			utils.Fatalf("failed to register catalyst service: %v", err)
 		}
+		log.Info("Brain-log makeFullNode", "step", "catalyst service registered")
 	}
+	log.Info("Brain-log makeFullNode", "exit", "full node created successfully")
 	return stack
 }
 

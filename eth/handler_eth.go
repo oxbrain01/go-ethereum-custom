@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
@@ -58,9 +59,11 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 	// Consume any broadcasts and announces, forwarding the rest to the downloader
 	switch packet := packet.(type) {
 	case *eth.NewPooledTransactionHashesPacket:
+		log.Info("Brain-log ethHandler.Handle", "packet", "NewPooledTransactionHashes", "peer", peer.ID(), "count", len(packet.Hashes))
 		return h.txFetcher.Notify(peer.ID(), packet.Types, packet.Sizes, packet.Hashes)
 
 	case *eth.TransactionsPacket:
+		log.Info("Brain-log ethHandler.Handle", "packet", "TransactionsPacket", "peer", peer.ID(), "count", len(*packet))
 		for _, tx := range *packet {
 			if tx.Type() == types.BlobTxType {
 				return errors.New("disallowed broadcast blob transaction")
@@ -69,6 +72,7 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 		return h.txFetcher.Enqueue(peer.ID(), *packet, false)
 
 	case *eth.PooledTransactionsResponse:
+		log.Info("Brain-log ethHandler.Handle", "packet", "PooledTransactionsResponse", "peer", peer.ID(), "count", len(*packet))
 		// If we receive any blob transactions missing sidecars, or with
 		// sidecars that don't correspond to the versioned hashes reported
 		// in the header, disconnect from the sending peer.

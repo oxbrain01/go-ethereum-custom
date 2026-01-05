@@ -287,11 +287,13 @@ func init() {
 }
 
 func main() {
-		log.Info("----Brain-log prepare: ", "fuccccccck");
+	log.Info("Brain-log main", "entry", "starting geth", "args", os.Args)
 	if err := app.Run(os.Args); err != nil {
+		log.Error("Brain-log main", "exit", "failed", "err", err)
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	log.Info("Brain-log main", "exit", "normal shutdown")
 }
 
 // prepare manipulates memory cache allowance and setups metric system.
@@ -308,26 +310,30 @@ func prepare(ctx *cli.Context) {
 	case ctx.IsSet(utils.HoodiFlag.Name):
 		log.Info("Starting Geth on Hoodi testnet...")
 
-	case !ctx.IsSet(utils.NetworkIdFlag.Name):
-		log.Info("Starting Geth on Ethereum mainnet...")
-
-    // ===InsChain specific logics===
+	// ===InsChain specific logics===
 	case ctx.IsSet(utils.InsChainFlag.Name):
 		log.Info("Starting Geth on InsChain mainnet...")
 
+	case ctx.IsSet(utils.NetworkIdFlag.Name):
+		// Custom network ID specified
+		log.Info("Starting Geth on custom network...")
+
+	default:
+		// Default to InsChain mainnet
+		log.Info("Starting Geth on InsChain mainnet...")
 	// END
 	}
 
 	log.Info("Brain-log prepare", "ctx", ctx);
 
-	// If we're a full node on mainnet without --cache specified, bump default cache allowance
+	// If we're a full node on mainnet (InsChain or Ethereum) without --cache specified, bump default cache allowance
 	if !ctx.IsSet(utils.CacheFlag.Name) && !ctx.IsSet(utils.NetworkIdFlag.Name) {
 		// Make sure we're not on any supported preconfigured testnet either
 		if !ctx.IsSet(utils.HoleskyFlag.Name) &&
 			!ctx.IsSet(utils.SepoliaFlag.Name) &&
 			!ctx.IsSet(utils.HoodiFlag.Name) &&
 			!ctx.IsSet(utils.DeveloperFlag.Name) {
-			// Nope, we're really on mainnet. Bump that cache up!
+			// We're on mainnet (default is InsChain). Bump that cache up!
 			log.Info("Bumping default cache on mainnet", "provided", ctx.Int(utils.CacheFlag.Name), "updated", 4096)
 			ctx.Set(utils.CacheFlag.Name, strconv.Itoa(4096))
 		}
@@ -341,21 +347,29 @@ func geth(ctx *cli.Context) error {
 	if args := ctx.Args().Slice(); len(args) > 0 {
 		return fmt.Errorf("invalid command: %q", args[0])
 	}
-	log.Info("Brain-log startNode geth ok ok start first" );
+	log.Info("Brain-log geth", "entry", "initializing node", "dataDir", ctx.String(utils.DataDirFlag.Name))
+	log.Info("Brain-log geth", "step", "prepare", "ctx", ctx)
 	prepare(ctx)
+	
+	log.Info("Brain-log geth", "step", "creating full node")
 	stack := makeFullNode(ctx)
 	defer stack.Close()
 
+	log.Info("Brain-log geth", "step", "starting node services")
 	startNode(ctx, stack, false)
+	log.Info("Brain-log geth", "step", "node started, waiting for shutdown")
 	stack.Wait()
+	log.Info("Brain-log geth", "exit", "node stopped")
 	return nil
 }
 
 // startNode boots up the system node and all registered protocols, after which
 // it starts the RPC/IPC interfaces and the miner.
 func startNode(ctx *cli.Context, stack *node.Node, isConsole bool) {
+	log.Info("Brain-log startNode", "entry", "booting node", "isConsole", isConsole)
 	// Start up the node itself
 	utils.StartNode(ctx, stack, isConsole)
+	log.Info("Brain-log startNode", "step", "node services started")
 
 	if ctx.IsSet(utils.UnlockedAccountFlag.Name) {
 		log.Warn(`The "unlock" flag has been deprecated and has no effect`)

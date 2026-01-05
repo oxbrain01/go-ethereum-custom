@@ -1594,11 +1594,13 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 //
 // This API is not capable for submitting blob transaction with sidecar.
 func (api *TransactionAPI) SendTransaction(ctx context.Context, args TransactionArgs) (common.Hash, error) {
+	log.Info("Brain-log SendTransaction", "entry", "received transaction request", "from", args.from())
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.from()}
 
 	wallet, err := api.b.AccountManager().Find(account)
 	if err != nil {
+		log.Error("Brain-log SendTransaction", "error", "wallet not found", "account", account.Address, "err", err)
 		return common.Hash{}, err
 	}
 
@@ -1625,12 +1627,20 @@ func (api *TransactionAPI) SendTransaction(ctx context.Context, args Transaction
 	api.b.ChainConfig().Inschain.Prague1.PoLDistributorAddress,
 	// END
 	)
-log.Info("Brain-log FillTransaction: ", header)
+	log.Info("Brain-log SendTransaction", "step", "transaction created", "hash", tx.Hash(), "nonce", tx.Nonce(), "gas", tx.Gas(), "to", tx.To())
 	signed, err := wallet.SignTx(account, tx, api.b.ChainConfig().ChainID)
 	if err != nil {
+		log.Error("Brain-log SendTransaction", "error", "failed to sign transaction", "hash", tx.Hash(), "err", err)
 		return common.Hash{}, err
 	}
-	return SubmitTransaction(ctx, api.b, signed)
+	log.Info("Brain-log SendTransaction", "step", "transaction signed", "hash", signed.Hash(), "submitting to pool")
+	hash, err := SubmitTransaction(ctx, api.b, signed)
+	if err != nil {
+		log.Error("Brain-log SendTransaction", "error", "failed to submit transaction", "hash", signed.Hash(), "err", err)
+	} else {
+		log.Info("Brain-log SendTransaction", "exit", "transaction submitted successfully", "hash", hash)
+	}
+	return hash, err
 }
 
 // FillTransaction fills the defaults (nonce, gas, gasPrice or 1559 fields)

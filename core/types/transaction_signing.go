@@ -231,6 +231,12 @@ func newModernSigner(chainID *big.Int, fork forks.Fork) Signer {
 	if fork >= forks.Prague {
 		s.txtypes.set(SetCodeTxType)
 	}
+	// ===InsChain specific: Add PoLTxType support for Prague1 ===
+	// PoLTx is used in Prague1, which is part of Prague fork
+	if fork >= forks.Prague {
+		s.txtypes.set(PoLTxType)
+	}
+	// ===END OF InsChain specific ===
 	return s
 }
 
@@ -259,6 +265,14 @@ func (s *modernSigner) Sender(tx *Transaction) (common.Address, error) {
 	if tt == LegacyTxType {
 		return s.legacy.Sender(tx)
 	}
+	// ===InsChain specific: PoLTx has no signature, return From field directly ===
+	if tt == PoLTxType {
+		if polTx, ok := tx.inner.(*PoLTx); ok {
+			return polTx.From, nil
+		}
+		return common.Address{}, ErrTxTypeNotSupported
+	}
+	// ===END OF InsChain specific ===
 	if tx.ChainId().Cmp(s.chainID) != 0 {
 		return common.Address{}, fmt.Errorf("%w: have %d want %d", ErrInvalidChainId, tx.ChainId(), s.chainID)
 	}

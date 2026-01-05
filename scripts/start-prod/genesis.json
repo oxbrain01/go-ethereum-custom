@@ -19,6 +19,31 @@
     "clique": {
       "period": 5,
       "epoch": 30000
+    },
+    "inschain": {
+      "prague1": {
+        "time": 0,
+        "baseFeeChangeDenominator": 48,
+        "minimumBaseFeeWei": 1000000000,
+        "polDistributorAddress": "0x9595959595959595959595959595959595959595"
+      },
+      "prague2": {
+        "time": 0,
+        "minimumBaseFeeWei": 0
+      },
+      "prague3": {
+        "time": null,
+        "insExVaultAddress": "0x0000000000000000000000000000000000000000",
+        "blockedAddresses": [
+          "0x0000000000000000000000000000000000000000",
+          "0x0000000000000000000000000000000000000000",
+          "0x0000000000000000000000000000000000000000"
+        ],
+        "rescueAddress": "0x0000000000000000000000000000000000000000"
+      },
+      "prague4": {
+        "time": 0
+      }
     }
   },
   "difficulty": "1",

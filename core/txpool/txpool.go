@@ -312,6 +312,7 @@ func (p *TxPool) GetMetadata(hash common.Hash) *TxMetadata {
 // Note, if sync is set the method will block until all internal maintenance
 // related to the add is finished. Only use this during tests for determinism.
 func (p *TxPool) Add(txs []*types.Transaction, sync bool) []error {
+	log.Info("Brain-log TxPool.Add", "entry", "adding transactions to pool", "count", len(txs), "sync", sync)
 	// Split the input transactions between the subpools. It shouldn't really
 	// happen that we receive merged batches, but better graceful than strange
 	// errors.
@@ -359,6 +360,14 @@ func (p *TxPool) Add(txs []*types.Transaction, sync bool) []error {
 		errs[i] = errsets[split][0]
 		errsets[split] = errsets[split][1:]
 	}
+	// Count successful and failed additions
+	successCount := 0
+	for _, err := range errs {
+		if err == nil {
+			successCount++
+		}
+	}
+	log.Info("Brain-log TxPool.Add", "exit", "transactions processed", "total", len(txs), "success", successCount, "failed", len(txs)-successCount)
 	return errs
 }
 

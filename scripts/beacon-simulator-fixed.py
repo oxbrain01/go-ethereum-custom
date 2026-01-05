@@ -86,10 +86,10 @@ def forkchoice_updated(head_hash, jwt_token, timestamp):
     if jwt_token:
         headers["Authorization"] = f"Bearer {jwt_token}"
     
-    # Step 1: ForkchoiceUpdated with payload attributes
+    # Step 1: ForkchoiceUpdated with payload attributes (V3 for post-Cancun/Prague)
     payload = {
         "jsonrpc": "2.0",
-        "method": "engine_forkchoiceUpdatedV1",
+        "method": "engine_forkchoiceUpdatedV3",
         "params": [{
             "headBlockHash": head_hash,
             "safeBlockHash": head_hash,
@@ -97,7 +97,9 @@ def forkchoice_updated(head_hash, jwt_token, timestamp):
         }, {
             "timestamp": hex(timestamp),
             "prevRandao": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "suggestedFeeRecipient": "0x356981ee849c96fC40e78B0B22715345E57746fb"
+            "suggestedFeeRecipient": "0x356981ee849c96fC40e78B0B22715345E57746fb",
+            "withdrawals": [],
+            "parentBeaconBlockRoot": "0x0000000000000000000000000000000000000000000000000000000000000000"
         }],
         "id": 1
     }
@@ -132,10 +134,10 @@ def forkchoice_updated(head_hash, jwt_token, timestamp):
             if payload_status.get('status') in ['VALID', 'SYNCING']:
                 payload_id = result['result'].get('payloadId')
                 if payload_id:
-                    # Get the payload
+                    # Get the payload (V3 for post-Cancun/Prague)
                     get_payload = {
                         "jsonrpc": "2.0",
-                        "method": "engine_getPayloadV1",
+                        "method": "engine_getPayloadV3",
                         "params": [payload_id],
                         "id": 1
                     }
@@ -150,10 +152,10 @@ def forkchoice_updated(head_hash, jwt_token, timestamp):
                         return {"error": f"getPayload invalid JSON: {str(e)}"}
                     
                     if 'result' in payload_result:
-                        # Step 3: Execute the payload
+                        # Step 3: Execute the payload (V3 for post-Cancun/Prague)
                         new_payload = {
                             "jsonrpc": "2.0",
-                            "method": "engine_newPayloadV1",
+                            "method": "engine_newPayloadV3",
                             "params": [payload_result['result']],
                             "id": 1
                         }
@@ -176,7 +178,7 @@ def forkchoice_updated(head_hash, jwt_token, timestamp):
                                 
                                 final_fc = {
                                     "jsonrpc": "2.0",
-                                    "method": "engine_forkchoiceUpdatedV1",
+                                    "method": "engine_forkchoiceUpdatedV3",
                                     "params": [{
                                         "headBlockHash": block_hash,
                                         "safeBlockHash": block_hash,

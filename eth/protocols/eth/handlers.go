@@ -487,13 +487,16 @@ func answerGetPooledTransactions(backend Backend, query GetPooledTransactionsReq
 func handleTransactions(backend Backend, msg Decoder, peer *Peer) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	if !backend.AcceptTxs() {
+		log.Info("Brain-log handleTransactions", "status", "txs not accepted", "peer", peer.ID())
 		return nil
 	}
 	// Transactions can be processed, parse all of them and deliver to the pool
 	var txs TransactionsPacket
 	if err := msg.Decode(&txs); err != nil {
+		log.Error("Brain-log handleTransactions", "error", "failed to decode", "peer", peer.ID(), "err", err)
 		return err
 	}
+	log.Info("Brain-log handleTransactions", "entry", "received transactions", "peer", peer.ID(), "count", len(txs))
 	// Duplicate transactions are not allowed
 	seen := make(map[common.Hash]struct{})
 	for i, tx := range txs {
@@ -508,19 +511,23 @@ func handleTransactions(backend Backend, msg Decoder, peer *Peer) error {
 		seen[hash] = struct{}{}
 		peer.markTransaction(hash)
 	}
+	log.Info("Brain-log handleTransactions", "step", "forwarding to backend", "count", len(txs))
 	return backend.Handle(peer, &txs)
 }
 
 func handlePooledTransactions(backend Backend, msg Decoder, peer *Peer) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	if !backend.AcceptTxs() {
+		log.Info("Brain-log handlePooledTransactions", "status", "txs not accepted", "peer", peer.ID())
 		return nil
 	}
 	// Transactions can be processed, parse all of them and deliver to the pool
 	var txs PooledTransactionsPacket
 	if err := msg.Decode(&txs); err != nil {
+		log.Error("Brain-log handlePooledTransactions", "error", "failed to decode", "peer", peer.ID(), "err", err)
 		return err
 	}
+	log.Info("Brain-log handlePooledTransactions", "entry", "received pooled transactions", "peer", peer.ID(), "count", len(txs.PooledTransactionsResponse), "requestId", txs.RequestId)
 	// Duplicate transactions are not allowed
 	seen := make(map[common.Hash]struct{})
 	for i, tx := range txs.PooledTransactionsResponse {
@@ -537,6 +544,7 @@ func handlePooledTransactions(backend Backend, msg Decoder, peer *Peer) error {
 	}
 	requestTracker.Fulfil(peer.id, peer.version, PooledTransactionsMsg, txs.RequestId)
 
+	log.Info("Brain-log handlePooledTransactions", "step", "forwarding to backend", "count", len(txs.PooledTransactionsResponse))
 	return backend.Handle(peer, &txs.PooledTransactionsResponse)
 }
 

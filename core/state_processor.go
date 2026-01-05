@@ -66,6 +66,7 @@ func (p *StateProcessor) chainConfig() *params.ChainConfig {
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
 func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (*ProcessResult, error) {
+	log.Info("Brain-log StateProcessor.Process", "entry", "processing block", "number", block.NumberU64(), "txs", len(block.Transactions()), "gasLimit", block.GasLimit())
 	var (
 		config      = p.chainConfig()
 		receipts    types.Receipts
@@ -104,19 +105,24 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
+		log.Info("Brain-log StateProcessor.Process", "step", "processing transaction", "index", i, "hash", tx.Hash(), "type", tx.Type(), "nonce", tx.Nonce())
 		msg, err := TransactionToMessage(tx, signer, header.BaseFee)
 		if err != nil {
+			log.Error("Brain-log StateProcessor.Process", "error", "failed to convert tx to message", "index", i, "hash", tx.Hash(), "err", err)
 			return nil, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
 		}
 		statedb.SetTxContext(tx.Hash(), i)
 
 		receipt, err := ApplyTransactionWithEVM(msg, gp, statedb, blockNumber, blockHash, context.Time, tx, usedGas, evm)
 		if err != nil {
+			log.Error("Brain-log StateProcessor.Process", "error", "failed to apply transaction", "index", i, "hash", tx.Hash(), "err", err)
 			return nil, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
 		}
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
+		log.Info("Brain-log StateProcessor.Process", "step", "transaction applied", "index", i, "hash", tx.Hash(), "status", receipt.Status, "gasUsed", receipt.GasUsed)
 	}
+	log.Info("Brain-log StateProcessor.Process", "step", "all transactions processed", "total", len(block.Transactions()), "receipts", len(receipts), "totalGasUsed", *usedGas)
 	// Read requests if Prague is enabled.
 	var requests [][]byte
 	if config.IsPrague(block.Number(), block.Time()) {
@@ -138,12 +144,14 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	p.chain.Engine().Finalize(p.chain, header, tracingStateDB, block.Body())
 
-	return &ProcessResult{
+	result := &ProcessResult{
 		Receipts: receipts,
 		Requests: requests,
 		Logs:     allLogs,
 		GasUsed:  *usedGas,
-	}, nil
+	}
+	log.Info("Brain-log StateProcessor.Process", "exit", "block processing complete", "number", block.NumberU64(), "gasUsed", *usedGas, "receipts", len(receipts), "logs", len(allLogs))
+	return result, nil
 }
 
 // ApplyTransactionWithEVM attempts to apply a transaction to the given state database

@@ -1964,10 +1964,13 @@ func (bc *BlockChain) insertChain(chain types.Blocks, setHead bool, makeWitness 
 		}
 		// The traced section of block import.
 		start := time.Now()
+		log.Info("Brain-log insertChain", "step", "processing block", "number", block.NumberU64(), "hash", block.Hash(), "parent", block.ParentHash(), "txs", len(block.Transactions()))
 		res, err := bc.ProcessBlock(parent.Root, block, setHead, makeWitness && len(chain) == 1)
 		if err != nil {
+			log.Error("Brain-log insertChain", "error", "block processing failed", "number", block.NumberU64(), "hash", block.Hash(), "err", err)
 			return nil, it.index, err
 		}
+		log.Info("Brain-log insertChain", "step", "block processed", "number", block.NumberU64(), "gasUsed", res.usedGas, "elapsed", time.Since(start))
 		res.stats.reportMetrics()
 
 		// Log slow block only if a single block is inserted (usually after the
@@ -2052,6 +2055,7 @@ func (bpr *blockProcessingResult) Stats() *ExecuteStats {
 // ProcessBlock executes and validates the given block. If there was no error
 // it writes the block and associated state to database.
 func (bc *BlockChain) ProcessBlock(parentRoot common.Hash, block *types.Block, setHead bool, makeWitness bool) (result *blockProcessingResult, blockEndErr error) {
+	log.Info("Brain-log ProcessBlock", "entry", "starting block processing", "number", block.NumberU64(), "hash", block.Hash(), "setHead", setHead, "makeWitness", makeWitness, "txs", len(block.Transactions()))
 	var (
 		err       error
 		startTime = time.Now()
@@ -2155,19 +2159,25 @@ func (bc *BlockChain) ProcessBlock(parentRoot common.Hash, block *types.Block, s
 
 	// Process block using the parent state as reference point
 	pstart := time.Now()
+	log.Info("Brain-log ProcessBlock", "step", "processing transactions", "txCount", len(block.Transactions()))
 	res, err := bc.processor.Process(block, statedb, bc.cfg.VmConfig)
 	if err != nil {
+		log.Error("Brain-log ProcessBlock", "error", "transaction processing failed", "number", block.NumberU64(), "err", err)
 		bc.reportBadBlock(block, res, err)
 		return nil, err
 	}
 	ptime := time.Since(pstart)
+	log.Info("Brain-log ProcessBlock", "step", "transactions processed", "gasUsed", res.GasUsed, "receipts", len(res.Receipts), "logs", len(res.Logs), "elapsed", ptime)
 
 	vstart := time.Now()
+	log.Info("Brain-log ProcessBlock", "step", "validating state", "number", block.NumberU64())
 	if err := bc.validator.ValidateState(block, statedb, res, false); err != nil {
+		log.Error("Brain-log ProcessBlock", "error", "state validation failed", "number", block.NumberU64(), "err", err)
 		bc.reportBadBlock(block, res, err)
 		return nil, err
 	}
 	vtime := time.Since(vstart)
+	log.Info("Brain-log ProcessBlock", "step", "state validated", "elapsed", vtime)
 
 	// If witnesses was generated and stateless self-validation requested, do
 	// that now. Self validation should *never* run in production, it's more of
@@ -2228,6 +2238,7 @@ func (bc *BlockChain) ProcessBlock(parentRoot common.Hash, block *types.Block, s
 		wstart = time.Now()
 		status WriteStatus
 	)
+	log.Info("Brain-log ProcessBlock", "step", "writing block to chain", "setHead", setHead)
 	if !setHead {
 		// Don't set the head, only insert the block
 		err = bc.writeBlockWithState(block, res.Receipts, statedb)
@@ -2235,8 +2246,10 @@ func (bc *BlockChain) ProcessBlock(parentRoot common.Hash, block *types.Block, s
 		status, err = bc.writeBlockAndSetHead(block, res.Receipts, res.Logs, statedb, false)
 	}
 	if err != nil {
+		log.Error("Brain-log ProcessBlock", "error", "failed to write block", "number", block.NumberU64(), "err", err)
 		return nil, err
 	}
+	log.Info("Brain-log ProcessBlock", "step", "block written", "status", status, "elapsed", time.Since(wstart))
 	// Report the collected witness statistics
 	if witnessStats != nil {
 		witnessStats.ReportMetrics(block.NumberU64())
@@ -2253,7 +2266,7 @@ func (bc *BlockChain) ProcessBlock(parentRoot common.Hash, block *types.Block, s
 	stats.TotalTime = elapsed
 	stats.MgasPerSecond = float64(res.GasUsed) * 1000 / float64(elapsed)
 
-	log.Info("Brain-log ProcessBlock", "res", res, status, witness, stats);
+	log.Info("Brain-log ProcessBlock", "res", res, "status", status, "witness", witness, "stats", stats);
 
 	return &blockProcessingResult{
 		usedGas:  res.GasUsed,
