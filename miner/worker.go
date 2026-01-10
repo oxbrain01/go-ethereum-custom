@@ -266,7 +266,8 @@ func (miner *Miner) prepareWork(genParams *generateParams, witness bool) (*envir
 	// ===InsChain specific header setup ===
 	log.Info("Brain-log prepareWork");
 	// ParentProposerPubkey should be set when NOT Prague1 (before Prague1 fork)
-	// After Prague1, this field should be nil
+	// At Prague1, ParentProposerPubkey in header should be nil (as per consensus validation)
+	// but block.ProposerPubkey() should return parent's proposer pubkey for validator
 	if !miner.chainConfig.IsPrague1(header.Number, header.Time) {
 		// Use proposerPubkey from genParams if provided, otherwise try to get from parent
 		if genParams.proposerPubkey != nil {
@@ -280,6 +281,10 @@ func (miner *Miner) prepareWork(genParams *generateParams, witness bool) (*envir
 			defaultPubkey := &common.Pubkey{}
 			header.ParentProposerPubkey = defaultPubkey
 		}
+	} else {
+		// At Prague1, header.ParentProposerPubkey should be nil (as per consensus validation)
+		// The proposer pubkey will be retrieved from parent block when needed (e.g., in commitPoLTx)
+		header.ParentProposerPubkey = nil
 	}
 	// === END OF InsChain specific header setup ===
 	// Could potentially happen if starting to mine in an odd state.
@@ -376,10 +381,8 @@ func (miner *Miner) applyTransaction(env *environment, tx *types.Transaction) (*
 	)
 	// ===InsChain specific applyTransaction ===
 	log.Info("Brain-log applyTransaction", "tx", tx);
+	// PoL transaction's gas should count towards block's gasUsed
 	blockGasUsed := &env.header.GasUsed
-	if tx.Type() == types.PoLTxType {
-		blockGasUsed = new(uint64)
-	}
 	// === END OF InsChain specific applyTransaction ===
 
 

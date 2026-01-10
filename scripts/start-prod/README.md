@@ -166,6 +166,26 @@ StaticNodes = ["enode://..."]
 
 4. Start node thứ 2 với cùng genesis.json
 
+## 💸 Transfer Balance Script
+
+A convenient script is available to transfer balance between wallets for testing:
+
+```bash
+# Transfer 0.1 ETH from default account 1 to account 2
+./scripts/start-prod/transfer-balance.sh
+
+# Transfer 1.5 ETH between specific accounts
+./scripts/start-prod/transfer-balance.sh 0x3569... 0x3bE6... 1.5
+
+# Transfer with default amount (0.1 ETH)
+./scripts/start-prod/transfer-balance.sh 0x3569... 0x3bE6...
+
+# Get help
+./scripts/start-prod/transfer-balance.sh --help
+```
+
+**Note**: The script uses `eth_sendTransaction` which requires the account to be unlocked. The validator account is automatically unlocked in `start-prod.sh`.
+
 ## 📚 Tài liệu thêm
 
 - [Geth Documentation](https://geth.ethereum.org/docs)

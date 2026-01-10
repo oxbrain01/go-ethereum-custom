@@ -295,6 +295,8 @@ This document describes the complete workflow of the go-ethereum node, based on 
 
 ---
 
+
+
 ## Peer Connection & Sync
 
 ### 1. Peer Connection

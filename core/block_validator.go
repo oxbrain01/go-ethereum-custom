@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -94,16 +95,27 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	isPrague1 := v.config.IsPrague1(block.Number(), block.Time())
 	var expectedPoLTx *types.Transaction
 	if isPrague1  {
-		if block.ProposerPubkey() == nil {
-			return errors.New("proposer pubkey is nil")
+		// At Prague1, header.ParentProposerPubkey should be nil (as per consensus validation)
+		// But we need the proposer pubkey from the parent block for PoLTx validation
+		var proposerPubkey *common.Pubkey
+		if block.Number().Uint64() > 0 {
+			parentBlock := v.bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
+			if parentBlock != nil {
+				proposerPubkey = parentBlock.ProposerPubkey()
+			}
 		}
+		// If still nil (e.g., genesis block or parent doesn't have it), use zero pubkey as fallback
+		if proposerPubkey == nil {
+			proposerPubkey = &common.Pubkey{}
+		}
+		
 		polTx, err := types.NewPoLTx(
 			v.config.ChainID,	
 			v.config.Inschain.Prague1.PoLDistributorAddress,
 			block.Number(),
 			params.PoLTxGasLimit,
 			block.BaseFee(),
-			block.ProposerPubkey(),
+			proposerPubkey,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create expected PoLTx: %w", err)

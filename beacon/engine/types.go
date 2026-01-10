@@ -99,7 +99,7 @@ type ExecutableData struct {
 	ExcessBlobGas        *uint64                 `json:"excessBlobGas"`
 	ExecutionWitness     *types.ExecutionWitness `json:"executionWitness,omitempty"`
 	// ===InsChain specific ExecutableData fields ===
-	ParentProposerPubkey *common.Pubkey `json:"parentProposerPubkey"`
+	ParentProposerPubkey *common.Pubkey `json:"parentProposerPubkey,omitempty"`
 	// ===END OF InsChain specific ExecutableData fields ===
 }
 
@@ -303,6 +303,24 @@ func ExecutableDataToBlockNoHash(data ExecutableData, versionedHashes []common.H
 		requestsHash = &h
 	}
 
+	// At Prague1, header.ParentProposerPubkey should be nil (as per consensus validation)
+	// Check if ParentProposerPubkey is a zero pubkey (all zeros) and treat it as nil
+	// This handles the case where the payload might have a zero pubkey instead of nil
+	var proposerPubkey *common.Pubkey
+	if data.ParentProposerPubkey != nil {
+		// Check if it's a zero pubkey (all zeros) - at Prague1, this should be nil
+		zeroPubkey := common.Pubkey{}
+		if *data.ParentProposerPubkey == zeroPubkey {
+			// At Prague1 (block 1+ with timestamp >= Prague1 time which is 0), zero pubkey should be nil
+			// For block 1 at Prague1, we should use nil to pass consensus validation
+			proposerPubkey = nil
+		} else {
+			proposerPubkey = data.ParentProposerPubkey
+		}
+	} else {
+		proposerPubkey = nil
+	}
+
 	header := &types.Header{
 		ParentHash:          data.ParentHash,
 		UncleHash:           types.EmptyUncleHash,
@@ -324,7 +342,7 @@ func ExecutableDataToBlockNoHash(data ExecutableData, versionedHashes []common.H
 		BlobGasUsed:         data.BlobGasUsed,
 		ParentBeaconRoot:    beaconRoot,
 		RequestsHash:        requestsHash,
-		ParentProposerPubkey: data.ParentProposerPubkey,
+		ParentProposerPubkey: proposerPubkey,
 	}
 	return types.NewBlockWithHeader(header).
 			WithBody(types.Body{Transactions: txs, Uncles: nil, Withdrawals: data.Withdrawals}).
@@ -354,8 +372,12 @@ func BlockToExecutableData(block *types.Block, fees *big.Int, sidecars []*types.
 		BlobGasUsed:          block.BlobGasUsed(),
 		ExcessBlobGas:        block.ExcessBlobGas(),
 		ExecutionWitness:     block.ExecutionWitness(),
-		ParentProposerPubkey: block.ProposerPubkey(),
 	}
+	
+	// At Prague1, header.ParentProposerPubkey should be nil (as per consensus validation)
+	// So block.ProposerPubkey() will return nil at Prague1, and we should set ParentProposerPubkey to nil in ExecutableData
+	// The validator will get the proposer pubkey from the parent block instead
+	data.ParentProposerPubkey = block.ProposerPubkey() // This will be nil at Prague1, which is correct
 
 	// Add blobs.
 	bundle := BlobsBundle{

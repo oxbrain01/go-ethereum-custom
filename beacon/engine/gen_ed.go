@@ -17,25 +17,25 @@ var _ = (*executableDataMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (e ExecutableData) MarshalJSON() ([]byte, error) {
 	type ExecutableData struct {
-		ParentHash       common.Hash             `json:"parentHash"    gencodec:"required"`
-		FeeRecipient     common.Address          `json:"feeRecipient"  gencodec:"required"`
-		StateRoot        common.Hash             `json:"stateRoot"     gencodec:"required"`
-		ReceiptsRoot     common.Hash             `json:"receiptsRoot"  gencodec:"required"`
-		LogsBloom        hexutil.Bytes           `json:"logsBloom"     gencodec:"required"`
-		Random           common.Hash             `json:"prevRandao"    gencodec:"required"`
-		Number           hexutil.Uint64          `json:"blockNumber"   gencodec:"required"`
-		GasLimit         hexutil.Uint64          `json:"gasLimit"      gencodec:"required"`
-		GasUsed          hexutil.Uint64          `json:"gasUsed"       gencodec:"required"`
-		Timestamp        hexutil.Uint64          `json:"timestamp"     gencodec:"required"`
-		ExtraData        hexutil.Bytes           `json:"extraData"     gencodec:"required"`
-		BaseFeePerGas    *hexutil.Big            `json:"baseFeePerGas" gencodec:"required"`
-		BlockHash        common.Hash             `json:"blockHash"     gencodec:"required"`
-		Transactions     []hexutil.Bytes         `json:"transactions"  gencodec:"required"`
+		ParentHash           common.Hash             `json:"parentHash"    gencodec:"required"`
+		FeeRecipient         common.Address          `json:"feeRecipient"  gencodec:"required"`
+		StateRoot            common.Hash             `json:"stateRoot"     gencodec:"required"`
+		ReceiptsRoot         common.Hash             `json:"receiptsRoot"  gencodec:"required"`
+		LogsBloom            hexutil.Bytes           `json:"logsBloom"     gencodec:"required"`
+		Random               common.Hash             `json:"prevRandao"    gencodec:"required"`
+		Number               hexutil.Uint64          `json:"blockNumber"   gencodec:"required"`
+		GasLimit             hexutil.Uint64          `json:"gasLimit"      gencodec:"required"`
+		GasUsed              hexutil.Uint64          `json:"gasUsed"       gencodec:"required"`
+		Timestamp            hexutil.Uint64          `json:"timestamp"     gencodec:"required"`
+		ExtraData            hexutil.Bytes           `json:"extraData"     gencodec:"required"`
+		BaseFeePerGas        *hexutil.Big            `json:"baseFeePerGas" gencodec:"required"`
+		BlockHash            common.Hash             `json:"blockHash"     gencodec:"required"`
+		Transactions         []hexutil.Bytes         `json:"transactions"  gencodec:"required"`
 		Withdrawals          []*types.Withdrawal     `json:"withdrawals"`
 		BlobGasUsed          *hexutil.Uint64         `json:"blobGasUsed"`
 		ExcessBlobGas        *hexutil.Uint64         `json:"excessBlobGas"`
 		ExecutionWitness     *types.ExecutionWitness `json:"executionWitness,omitempty"`
-		ParentProposerPubkey *common.Pubkey          `json:"parentProposerPubkey"`
+		ParentProposerPubkey *common.Pubkey          `json:"parentProposerPubkey,omitempty"`
 	}
 	var enc ExecutableData
 	enc.ParentHash = e.ParentHash
@@ -68,25 +68,25 @@ func (e ExecutableData) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (e *ExecutableData) UnmarshalJSON(input []byte) error {
 	type ExecutableData struct {
-		ParentHash       *common.Hash            `json:"parentHash"    gencodec:"required"`
-		FeeRecipient     *common.Address         `json:"feeRecipient"  gencodec:"required"`
-		StateRoot        *common.Hash            `json:"stateRoot"     gencodec:"required"`
-		ReceiptsRoot     *common.Hash            `json:"receiptsRoot"  gencodec:"required"`
-		LogsBloom        *hexutil.Bytes          `json:"logsBloom"     gencodec:"required"`
-		Random           *common.Hash            `json:"prevRandao"    gencodec:"required"`
-		Number           *hexutil.Uint64         `json:"blockNumber"   gencodec:"required"`
-		GasLimit         *hexutil.Uint64         `json:"gasLimit"      gencodec:"required"`
-		GasUsed          *hexutil.Uint64         `json:"gasUsed"       gencodec:"required"`
-		Timestamp        *hexutil.Uint64         `json:"timestamp"     gencodec:"required"`
-		ExtraData        *hexutil.Bytes          `json:"extraData"     gencodec:"required"`
-		BaseFeePerGas    *hexutil.Big            `json:"baseFeePerGas" gencodec:"required"`
-		BlockHash        *common.Hash            `json:"blockHash"     gencodec:"required"`
-		Transactions     []hexutil.Bytes         `json:"transactions"  gencodec:"required"`
+		ParentHash           *common.Hash            `json:"parentHash"    gencodec:"required"`
+		FeeRecipient         *common.Address         `json:"feeRecipient"  gencodec:"required"`
+		StateRoot            *common.Hash            `json:"stateRoot"     gencodec:"required"`
+		ReceiptsRoot         *common.Hash            `json:"receiptsRoot"  gencodec:"required"`
+		LogsBloom            *hexutil.Bytes          `json:"logsBloom"     gencodec:"required"`
+		Random               *common.Hash            `json:"prevRandao"    gencodec:"required"`
+		Number               *hexutil.Uint64         `json:"blockNumber"   gencodec:"required"`
+		GasLimit             *hexutil.Uint64         `json:"gasLimit"      gencodec:"required"`
+		GasUsed              *hexutil.Uint64         `json:"gasUsed"       gencodec:"required"`
+		Timestamp            *hexutil.Uint64         `json:"timestamp"     gencodec:"required"`
+		ExtraData            *hexutil.Bytes          `json:"extraData"     gencodec:"required"`
+		BaseFeePerGas        *hexutil.Big            `json:"baseFeePerGas" gencodec:"required"`
+		BlockHash            *common.Hash            `json:"blockHash"     gencodec:"required"`
+		Transactions         []hexutil.Bytes         `json:"transactions"  gencodec:"required"`
 		Withdrawals          []*types.Withdrawal     `json:"withdrawals"`
 		BlobGasUsed          *hexutil.Uint64         `json:"blobGasUsed"`
 		ExcessBlobGas        *hexutil.Uint64         `json:"excessBlobGas"`
 		ExecutionWitness     *types.ExecutionWitness `json:"executionWitness,omitempty"`
-		ParentProposerPubkey *common.Pubkey          `json:"parentProposerPubkey"`
+		ParentProposerPubkey *common.Pubkey          `json:"parentProposerPubkey,omitempty"`
 	}
 	var dec ExecutableData
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -164,7 +164,15 @@ func (e *ExecutableData) UnmarshalJSON(input []byte) error {
 		e.ExecutionWitness = dec.ExecutionWitness
 	}
 	if dec.ParentProposerPubkey != nil {
-		e.ParentProposerPubkey = dec.ParentProposerPubkey
+		// Check if it's a zero pubkey (all zeros) - at Prague1, we should use nil instead
+		zeroPubkey := common.Pubkey{}
+		if *dec.ParentProposerPubkey == zeroPubkey {
+			// At Prague1, zero pubkeys should be treated as nil
+			// We'll check the block number/timestamp in ExecutableDataToBlockNoHash
+			e.ParentProposerPubkey = nil
+		} else {
+			e.ParentProposerPubkey = dec.ParentProposerPubkey
+		}
 	}
 	return nil
 }

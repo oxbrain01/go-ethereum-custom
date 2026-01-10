@@ -429,7 +429,7 @@ func (api *ConsensusAPI) GetPayloadV3(payloadID engine.PayloadID) (*engine.Execu
 func (api *ConsensusAPI) GetPayloadV4(payloadID engine.PayloadID) (*engine.ExecutionPayloadEnvelope, error) {
 	return api.getPayload(
 		payloadID,
-		false,
+		true, // Use full=true to wait for full block with transactions (including PoL transaction)
 		[]engine.PayloadVersion{engine.PayloadV3},
 		[]forks.Fork{forks.Prague},
 	)
